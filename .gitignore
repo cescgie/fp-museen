@@ -2,3 +2,7 @@
 .baseDir.ts
 dist
 node_modules
+.env
+log/*
+*.log
+typings

@@ -1,6 +1,6 @@
-# TypeScript 2 + Express + Node.js
+# RESTFul Crowdsourcing für Museen
 
-This is a repository to go with my article on creating an Express web application using TypeScript 2.
+This is an Express web application using TypeScript 2.
 
 ## Install
 
