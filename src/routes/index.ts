@@ -1,10 +1,6 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { BaseRoute } from "./route";
 
-import { IUser } from "../interfaces/user";
-import { userSchema } from "../schemas/user";
-import { IModel } from '../models/model';
-
 /**
  * / route
  *

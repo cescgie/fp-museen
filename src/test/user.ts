@@ -36,8 +36,8 @@ class UserTest {
   constructor() {
     this.data = {
       email: "yoggifirmanda@gmail.com",
-      firstName: "Yoggi",
-      lastName: "Firmanda"
+      firstname: "Yoggi",
+      lastname: "Firmanda"
     };
   }
 
@@ -52,10 +52,10 @@ class UserTest {
       result.email.should.equal(this.data.email);
 
       //verify firstName
-      result.firstName.should.equal(this.data.firstName);
+      result.firstname.should.equal(this.data.firstname);
 
       //verify lastName
-      result.lastName.should.equal(this.data.lastName);
+      result.lastname.should.equal(this.data.lastname);
     });
   }
 }

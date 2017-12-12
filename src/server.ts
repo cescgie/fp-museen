@@ -10,6 +10,9 @@ import mongoose = require("mongoose"); //import mongoose
 //routes
 import { IndexRoute } from "./routes/index";
 
+//API V2
+import { ApiV1UserRoute } from "./routes/api/v1/user";
+
 //interfaces
 import { IUser } from "./interfaces/user"; //import IUser
 
@@ -78,6 +81,14 @@ export class Server {
    */
   public api() {
     //empty for now
+    let router: express.Router;
+    router = express.Router();
+
+    // API V1
+    ApiV1UserRoute.create(router);
+
+    //use router middleware
+    this.app.use(router);
   }
 
   /**
@@ -146,7 +157,7 @@ export class Server {
 
     //IndexRoute
     IndexRoute.create(router);
-
+    
     //use router middleware
     this.app.use(router);
   }

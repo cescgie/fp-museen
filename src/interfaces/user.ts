@@ -1,5 +1,14 @@
 export interface IUser {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
+  username?:string;
+  password?:string;
+  email?:string;
+  updatedAt?:any;
+  updatedBy?:any;
+  firstname?:string;
+  lastname?:string;
+  createdAt?:string;
+  active?:boolean;
+  token?:string;
+  role?:number;
+  boxid?:any;
 }
