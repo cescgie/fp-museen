@@ -1,6 +1,9 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { BaseRoute } from "./route";
 
+import { IUser } from "../interfaces/user";
+import { userSchema } from "../schemas/user";
+import { IModel } from '../models/model';
 
 /**
  * / route
@@ -8,7 +11,7 @@ import { BaseRoute } from "./route";
  * @class User
  */
 export class IndexRoute extends BaseRoute {
-
+  
   /**
    * Create the routes.
    *
@@ -33,7 +36,7 @@ export class IndexRoute extends BaseRoute {
    * @constructor
    */
   constructor() {
-    super();
+    super();    
   }
 
   /**
@@ -51,7 +54,7 @@ export class IndexRoute extends BaseRoute {
 
     //set message
     let options: Object = {
-      "message": "Welcome to the Tour of Heros"
+      "message": "Welcome to the Tour of Heros"   
     };
 
     //render template

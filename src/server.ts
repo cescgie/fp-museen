@@ -20,6 +20,10 @@ import { IUserModel } from "./models/user"; //import IUserModel
 //schemas
 import { userSchema } from "./schemas/user"; //import userSchema
 
+//load environment variables from .env into ENV (process.env).
+const dotenv = require('dotenv');
+dotenv.load(); //load environment variables from .env into ENV (process.env).
+
 /**
  * The server.
  *
@@ -83,8 +87,8 @@ export class Server {
    * @method config
    */
   public config() {
-    const MONGODB_CONNECTION: string = "mongodb://localhost:27017/heros";
-
+    const MONGODB_CONNECTION: string = "mongodb://"+process.env.MONGO_USER+":"+process.env.MONGO_PASSWORD+"@"+process.env.MONGO_HOST+":"+process.env.MONGO_PORT+"/"+process.env.MONGO_DB;
+    
     //add static paths
     this.app.use(express.static(path.join(__dirname, "public")));
 

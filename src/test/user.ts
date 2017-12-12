@@ -3,6 +3,9 @@ import { IUser } from "../interfaces/user";
 import { IUserModel } from "../models/user";
 import { userSchema } from "../schemas/user";
 import mongoose = require("mongoose");
+//load environment variables from .env into ENV (process.env).
+const dotenv = require('dotenv');
+dotenv.load(); //load environment variables from .env into ENV (process.env).
 
 @suite
 class UserTest {
@@ -21,7 +24,7 @@ class UserTest {
     mongoose.Promise = global.Promise;
 
     //connect to mongoose and create model
-    const MONGODB_CONNECTION: string = "mongodb://localhost:27017/heros";
+    const MONGODB_CONNECTION: string = "mongodb://"+process.env.MONGO_USER+":"+process.env.MONGO_PASSWORD+"@"+process.env.MONGO_HOST+":"+process.env.MONGO_PORT+"/"+process.env.MONGO_DB;
     let connection: mongoose.Connection = mongoose.createConnection(MONGODB_CONNECTION);
     UserTest.User = connection.model<IUserModel>("User", userSchema);
 
@@ -32,9 +35,9 @@ class UserTest {
 
   constructor() {
     this.data = {
-      email: "foo@bar.com",
-      firstName: "Brian",
-      lastName: "Love"
+      email: "yoggifirmanda@gmail.com",
+      firstName: "Yoggi",
+      lastName: "Firmanda"
     };
   }
 
