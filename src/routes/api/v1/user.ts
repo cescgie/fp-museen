@@ -56,6 +56,7 @@ export class ApiV1UserRoute extends BaseRoute {
         //log
         console.log("[ApiV1UserRoute::create] Creating ApiV1UserRoute route.");
 
+        // Register/create user
         router.post("/api/v1/user", (req: Request, res: Response, next: NextFunction) => {
             new ApiV1UserRoute().create(req, res);
         });
@@ -64,6 +65,12 @@ export class ApiV1UserRoute extends BaseRoute {
         router.post("/api/v1/user/auth", (req: Request, res: Response) =>{
             new ApiV1UserRoute().auth(req, res);
         });
+
+        // Verify registered user
+        router.put("/api/v1/user/activate", (req: Request, res: Response) =>{
+            new ApiV1UserRoute().activate(req, res);
+        });
+
     }
 
     /**
@@ -233,6 +240,69 @@ export class ApiV1UserRoute extends BaseRoute {
             this.error_response = {
                 "status": 307,
                 "message":"DATA_NOT_COMPLETE"
+            };
+            res.json(this.error_response);
+        }
+    }
+
+    /**
+     * Method to activate user
+     * @param req 
+     * @param res 
+     */
+    public activate(req: Request, res: Response){
+        let email = req.body.email;
+        let token = req.body.token;
+        
+        // Check if email & token exist
+        if(email && token){
+            User.findOne({email:email}, (err, user)=> {
+                if(err){
+                    this.error_response = {
+                        "status": 402,
+                        "message":"DATABASE_ERROR"
+                    };
+                    res.send(this.error_response);
+                    
+                }else{
+                    if(!user){
+                        this.error_response = {
+                            "status": 302,
+                            "message":"NO_USER_EXISTS"
+                        };
+                        res.json(this.error_response);
+                    }else{
+                        if(user.token !== token || user.token === '' || user.token === null){
+                            this.error_response = {
+                                "status": 304,
+                                "message":"INVALID_TOKEN"
+                            };
+                            res.send(this.error_response);                                               
+                        }else{
+                            user.set({ token: null, active:true });
+                            user.save((err, updatedUser)=> {
+                                if(err){
+                                    this.error_response = {
+                                        status: 402,
+                                        message:"DATABASE_ERROR"
+                                    };
+                                    res.send(this.error_response);
+                                }else{
+                                    this.success_response = {
+                                        status: 200,
+                                        message: "USER_ACTIVATE_SUCCESS"
+                                    };
+                                    res.send(this.success_response);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }else{
+            this.error_response = {
+                "status": 303,
+                "message":"EMAIL_NOT_AVAILABLE"
             };
             res.json(this.error_response);
         }
