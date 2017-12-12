@@ -59,6 +59,11 @@ export class ApiV1UserRoute extends BaseRoute {
         router.post("/api/v1/user", (req: Request, res: Response, next: NextFunction) => {
             new ApiV1UserRoute().create(req, res);
         });
+
+        // Authenticate user
+        router.post("/api/v1/user/auth", (req: Request, res: Response) =>{
+            new ApiV1UserRoute().auth(req, res);
+        });
     }
 
     /**
@@ -75,7 +80,7 @@ export class ApiV1UserRoute extends BaseRoute {
         // base app URL
         this.baseURL = process.env.APP_BASEURL;
     }
-    
+
     /**
      * Method to create user
      * @param req email, password
@@ -167,76 +172,143 @@ export class ApiV1UserRoute extends BaseRoute {
     }
 
     /**
+     * Authenticate user
+     * @param req token,email,password
+     * @param res status, content(id, role, JWT token)
+     */
+    public auth(req: Request, res: Response){
+        let email = req.body.email;
+        let password = req.body.password;
+        
+        // Check if email & password exist
+        if(email && password){
+            User.findOne({email:email}).then(result => {
+                if(!result || result === null){
+                    this.error_response = {
+                        status: 302,
+                        message: "NO_USER_EXISTS",
+                    };
+                    res.send(this.error_response);
+                }else{
+                    //check if user already active
+                    if(!result.active){
+                        this.error_response = {
+                            status: 306,
+                            message: "USER_UNVERIFIED",
+                        };
+                        res.send(this.error_response);
+                    }else 
+                    if(!this.verifyPassword(password, result.password)){ 
+                        // if user password unverified
+                        this.error_response = {
+                            status: 305,
+                            message: "CREDENTIALS_NOT_MATCHED",
+                        };
+                        res.send(this.error_response);
+                    }else{
+                        let user_data:type.userDataToken = {
+                            _id: result._id,
+                            role:result.role
+                        };
+                        // Generate Token
+                        let token:any = this.generateToken(user_data);
+
+                        // Send response data including token, id, role
+                        let responseData:any = {
+                            status:200,
+                            message: 'USER_AUTH_SUCCESS',
+                            content:{
+                                token:token,
+                                id:result._id,
+                                role:result.role                                
+                            }
+                        }
+
+                        // Response data as json
+                        res.send(responseData);
+                    }
+                }
+            });
+        }else{
+            this.error_response = {
+                "status": 307,
+                "message":"DATA_NOT_COMPLETE"
+            };
+            res.json(this.error_response);
+        }
+    }
+
+    /**
      * generate token
      * @param user_data  
      */
     generateToken(user_data:type.userDataToken) {
         
-             let claims:any = {
-                 sub: user_data._id,
-                 iss: this.baseURL,
-                 permissions: user_data.role
-             }
-     
-             let jwt = nJwt.create(claims,this.secret_key);
-     
-             let token = jwt.compact();
-     
-             return token;
-         }
-     
-         /**
-          * To hash password
-          * Source: https://github.com/davidwood/node-password-hash
-          * @param password 
-          */
-         hashPassword(password:string){
-             /**
-              * passwordHash.generate(password) : generate
-              * passwordHash.verify('right_password', hashedPassword); // true
-              * passwordHash.verify('wrong_password', hashedPassword); // false
-              * passwordHash.isHashed('right_password'); // false
-              * passwordHash.isHashed(hashedPassword); // true
-              */
-             let hashedPassword:string = passwordHash.generate(password);
-             
-             return hashedPassword;
-         }
-     
-         /**
-          * Verify password
-          * @param password 
-          * @param DBPassword 
-          */
-         verifyPassword(password:string, DBPassword:string){
-             let verify:boolean=passwordHash.verify(password, DBPassword); 
-             return verify;
-         }
-     
-         /**
-          * Verify JWT
-          * @param headerAuth 
-          * return jwt header & body in json
-          */
-         public verifyJWT(headerAuth:string): Promise<any>{
-             /**
-              * get token from headerAuth
-              * check if token valid with
-              */
-             let getToken:any = headerAuth.split(' ');
-     
-             // TODO
-             // store & use sign key in DB
-     
-             // verify token
-             return new Promise((resolve,reject)=>{
-                 nJwt.verify(getToken[1],this.secret_key, (err,verifiedJwt)=>{
-                     if(err){
-                         reject(err);                             
-                     }else{
-                         resolve(verifiedJwt);       
-                     }
-                 });
-             });
-         }
+        let claims:any = {
+            sub: user_data._id,
+            iss: this.baseURL,
+            permissions: user_data.role
+        }
+
+        let jwt = nJwt.create(claims,this.secret_key);
+
+        let token = jwt.compact();
+
+        return token;
+    }
+
+    /**
+     * To hash password
+    * Source: https://github.com/davidwood/node-password-hash
+    * @param password 
+    */
+    hashPassword(password:string){
+        /**
+         * passwordHash.generate(password) : generate
+        * passwordHash.verify('right_password', hashedPassword); // true
+        * passwordHash.verify('wrong_password', hashedPassword); // false
+        * passwordHash.isHashed('right_password'); // false
+        * passwordHash.isHashed(hashedPassword); // true
+        */
+        let hashedPassword:string = passwordHash.generate(password);
+        
+        return hashedPassword;
+    }
+
+    /**
+     * Verify password
+    * @param password 
+    * @param DBPassword 
+    */
+    verifyPassword(password:string, DBPassword:string){
+        let verify:boolean=passwordHash.verify(password, DBPassword); 
+        return verify;
+    }
+
+    /**
+     * Verify JWT
+    * @param headerAuth 
+    * return jwt header & body in json
+    */
+    public verifyJWT(headerAuth:string): Promise<any>{
+        /**
+         * get token from headerAuth
+        * check if token valid with
+        */
+        let getToken:any = headerAuth.split(' ');
+
+        // TODO
+        // store & use sign key in DB
+
+        // verify token
+        return new Promise((resolve,reject)=>{
+            nJwt.verify(getToken[1],this.secret_key, (err,verifiedJwt)=>{
+                if(err){
+                    reject(err);                             
+                }else{
+                    resolve(verifiedJwt);       
+                }
+            });
+        });
+    }
 }
