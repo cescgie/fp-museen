@@ -129,7 +129,7 @@ export class Server {
     mongoose.Promise = global.Promise;
 
     //connect to mongoose
-    let connection: mongoose.Connection = mongoose.createConnection(MONGODB_CONNECTION);
+    let connection: mongoose.Connection = mongoose.createConnection(MONGODB_CONNECTION, { useMongoClient: true });
 
     //create models
     this.model.user = connection.model<IUserModel>("User", userSchema);
