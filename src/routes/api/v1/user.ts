@@ -44,7 +44,10 @@ export class ApiV1UserRoute extends BaseRoute {
     protected secret_key:string;
     protected baseURL:string;
     protected token:string;    
-    
+    protected object_properties: any;
+
+    private lib:Library = new Library();
+
     /**
      * Create the routes.
      *
@@ -71,6 +74,15 @@ export class ApiV1UserRoute extends BaseRoute {
             new ApiV1UserRoute().activate(req, res);
         });
 
+        // verify user through client Bearer
+        router.get("/api/v1/user/verify_user", (req: Request, res: Response) =>{
+            new ApiV1UserRoute().verify_user(req, res);
+        });
+
+        // Get user
+        router.get("/api/v1/user", (req: Request, res: Response) =>{
+            new ApiV1UserRoute().get(req, res);
+        });
     }
 
     /**
@@ -86,6 +98,8 @@ export class ApiV1UserRoute extends BaseRoute {
         this.secret_key = process.env.SECRET_KEY;
         // base app URL
         this.baseURL = process.env.APP_BASEURL;
+        // allowed or except user data
+        this.object_properties = ['_id', 'createdAt', 'updatedAt', 'email', 'password', 'token', 'active', 'firstname', 'lastname', 'role', 'boxid'];
     }
 
     /**
@@ -303,6 +317,183 @@ export class ApiV1UserRoute extends BaseRoute {
             this.error_response = {
                 "status": 303,
                 "message":"EMAIL_NOT_AVAILABLE"
+            };
+            res.json(this.error_response);
+        }
+    }
+
+    /**
+     * Verify jwt token
+     * @param req 
+     * @param res 
+     */
+    public verify_user(req: Request, res: Response){
+        if(req.headers['authorization'] && req.headers['authorization'] !== null){
+            let headerAuth:any = req.headers['authorization'];            
+            /**
+             * get token from headerAuth
+             * check if token valid with
+             */
+            let getToken:any = headerAuth.split(' ');
+            // verify token
+            nJwt.verify(getToken[1],this.secret_key, (err,token)=>{
+                if(err){
+                    // respond to request with error
+                    // console.log('token invalid');
+                    res.send({ status: 401 });                                
+                }else{
+                    // continue with the request
+                    // console.log('token valid');
+                    res.send({ status: 200, body: { status: 'ok' } });            
+                }
+            });
+        }else{
+            // console.log('end');
+            res.send({ status: 401 });  
+        }
+    }
+
+    /**
+     * Method to get users (if sent param included _id or email or user, then get ONE user)
+     * @param req body: (email/username), token . If req.email/req username empty, return all users
+     * @param res {_id,createdAt,updatedAt,firstname,lastname,email}
+     */
+    public get(req: Request, res: Response){
+
+        if(req.headers['authorization'] && req.headers['authorization'] !== null){
+            let headerAuth:any = req.headers['authorization'];            
+            
+            this.verifyJWT(headerAuth).then((resp)=>{
+                let userID = resp.body.sub;
+                let userRole = resp.body.permissions;
+
+                if(!resp){
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.json(this.error_response);
+                }else{
+                    let email:string = req.query.email;
+                    let username:string = req.query.username;
+                    let _id:string = req.query._id;
+                    
+                    let QUERY:any;
+        
+                    if(email || username || _id){
+                        if(email && email!==null){
+                            QUERY = {
+                                email:email
+                            }
+                        }else if(username && username !==null){
+                            QUERY = {
+                                username:username
+                            }
+                        }else if(_id && _id !==null){
+                            QUERY = {
+                                _id:_id
+                            }
+                        }
+                        
+                        User.findOne(QUERY, {}, (err, user)=> {
+                            let res_json:any;            
+                            if(err){
+                                this.error_response = {
+                                    "status": 309,
+                                    "message":"QUERY_ERROR",
+                                    "content": err.message
+                                };
+                                res_json = this.error_response;
+                            }else if(!user || user === null){
+                                this.error_response = {
+                                    "status": 308,
+                                    "message":"NO_DATA_FOUND"
+                                };
+                                res_json = this.error_response;
+                            }else{
+                                let permissions: any;
+                                let status: string;
+
+                                // Permissions for user 
+                                if(userRole == 1 || userRole == 2 || userID == user._id){
+                                    permissions = this.object_properties;
+                                }else{
+                                    permissions = ['password','active','token','boxid'];
+                                    status = 'except';
+                                }
+
+                                let user_data_ : any = this.lib.dataWithPermissions(user,permissions,status);
+
+                                this.success_response = {
+                                    status:200,
+                                    message:'USER_READ_SUCCESS',
+                                    content: user_data_
+                                }
+
+                                res_json = this.success_response;
+                            }
+                            res.json(res_json);                                                        
+                        })
+                    }else{
+                        // Get all users
+                        User.find({}, {}, (err, user)=> {
+                            let res_json:any;            
+                            if(err){
+                                this.error_response = {
+                                    "status": 309,
+                                    "message":"QUERY_ERROR",
+                                    "content": err.message
+                                };
+                                res_json = this.error_response;
+                            }else if(!user || user === null){
+                                this.error_response = {
+                                    "status": 308,
+                                    "message":"NO_DATA_FOUND"
+                                };
+                                res_json = this.error_response;
+                            }else{
+                                let permissions: any;
+                                let status: string;
+
+                                // Permissions for user role 3 else *all
+                                if(userRole == 3){
+                                    status = 'only';
+                                    permissions = ['_id', 'createdAt', 'updatedAt', 'email', 'active', 'firstname', 'lastname', 'role', 'boxid'];
+                                }else{
+                                    status = 'only';
+                                    permissions = this.object_properties;
+                                }
+
+                                let user_data_:any=[];
+                                
+                                for (let i = 0; i < user.length; i++) {
+                                    user_data_[i] = {};
+                                    user_data_[i] = this.lib.dataWithPermissions(user[i],permissions,status);
+                                }
+
+                                this.success_response = {
+                                    status:200,
+                                    message:'USER_READ_SUCCESS',
+                                    content: user_data_
+                                }
+
+                                res_json = this.success_response;                                
+                            }
+                            res.json(res_json);
+                        });
+                    }
+                }
+            }).catch((err)=>{
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.json(this.error_response); 
+            })
+        }else{
+            this.error_response = {
+                "status": 401,
+                "message":"NOT_AUTHORIZED"
             };
             res.json(this.error_response);
         }
