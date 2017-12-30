@@ -8,7 +8,8 @@
     "stg": "rm -rf .tmp/ && gulp",
     "dev": "rm -rf .tmp/ & gulp watch & NODE_ENV=development nodemon ./bin/www",
     "start": "node ./bin/www",
-    "test": "mocha dist/test"
+    "test": "mocha dist/test",
+    "test-sendgrid": "tsc && mocha --recursive dist/test/services/email/facades/test-email"
   },
   "dependencies": {
     "body-parser": "^1.15.2",
@@ -23,7 +24,8 @@
     "password-hash": "^1.2.2",
     "pug": "^2.0.0-beta6",
     "q": "^1.4.1",
-    "secure-random": "^1.1.1"
+    "secure-random": "^1.1.1",
+    "sendgrid": "^5.2.3"
   },
   "devDependencies": {
     "@types/body-parser": "0.0.33",
