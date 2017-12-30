@@ -83,6 +83,12 @@ export class ApiV1UserRoute extends BaseRoute {
         router.get("/api/v1/user", (req: Request, res: Response) =>{
             new ApiV1UserRoute().get(req, res);
         });
+
+        // Update one user
+        router.put("/api/v1/user", (req: Request, res: Response) =>{
+            new ApiV1UserRoute().update(req, res);
+        });
+
     }
 
     /**
@@ -497,6 +503,141 @@ export class ApiV1UserRoute extends BaseRoute {
             };
             res.json(this.error_response);
         }
+    }
+
+    /**
+     * Method to update user data
+     * @param req token, {dinamic properties}
+     * @param res status
+     */
+    public update(req: Request, res: Response){
+
+        if(req.headers['authorization'] && req.headers['authorization'] !== null){
+            let headerAuth:any = req.headers['authorization'];            
+            
+            this.verifyJWT(headerAuth).then((resp)=>{
+                let userID = resp.body.sub;
+                let userRole = resp.body.permissions;
+                
+                if(!resp){
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.json(this.error_response);
+                }else{
+                    let email:string = req.query.email;
+                    let username:string = req.query.username;
+                    let _id:string = req.query._id;
+
+                    let QUERY:any;
+                    
+                    if(email || username || _id){
+                        if(email && email!==null){
+                            QUERY = {
+                                email:email
+                            }
+                        }else if(username && username !==null){
+                            QUERY = {
+                                username:username
+                            }
+                        }else if(_id && _id !==null){
+                            QUERY = {
+                                _id:_id
+                            }
+                        }
+
+                        User.findOne(QUERY, {}, (err, user)=> {
+                            let res_json:any;            
+                            if(err){
+                                this.error_response = {
+                                    "status": 309,
+                                    "message":"QUERY_ERROR",
+                                    "content": err.message
+                                };
+                                res.json(this.error_response);
+                            }else if(!user || user === null){
+                                this.error_response = {
+                                    "status": 308,
+                                    "message":"NO_DATA_FOUND"
+                                };
+                                res.json(this.error_response);
+                            }else{
+                                // if role is 1(master) or 2(admin) or userID is matched then update allowed
+                                if(userRole == 1 || userRole == 2 || userID == user._id){
+                                    let arrayKey:any = [];
+                                    
+                                    for (var key in req.body) {
+                                        arrayKey.push(key);                    
+                                    }
+                        
+                                    // remove token, email and active from arrayKey to prevent update these two keys
+                                    if (arrayKey.indexOf('email') !== -1) {
+                                        arrayKey.splice(arrayKey.indexOf('email'), 1);
+                                    }
+                                    if (arrayKey.indexOf('token') !== -1) {
+                                        arrayKey.splice(arrayKey.indexOf('token'), 1);
+                                    }
+                                    if (arrayKey.indexOf('active') !== -1) {
+                                        arrayKey.splice(arrayKey.indexOf('active'), 1);
+                                    }
+                        
+                                    let data_toUpdate:any ={};
+                                    // update only given data
+                                    for (let i = 0; i < arrayKey.length; i++) {
+                                        // if password given, hash it
+                                        if(arrayKey[i]=='password'){
+                                            data_toUpdate[arrayKey[i]] = this.hashPassword(req.body[arrayKey[i]]);
+                                        }else{
+                                            data_toUpdate[arrayKey[i]] = req.body[arrayKey[i]];                    
+                                        }
+                                    }
+                                    // update time
+                                    data_toUpdate['updatedAt'] = new Date();
+
+                                    user.set(data_toUpdate);
+                                    user.save((err, updatedUser)=> {
+                                        if(err){
+                                            this.error_response = {
+                                                "status": 402,
+                                                "message":"DATABASE_ERROR"
+                                            };
+                                            res.send(this.error_response);
+                                        }else{
+                                            this.success_response = {
+                                                "status": 200,
+                                                "message": "USER_UPDATE_SUCCESS",
+                                                "content": updatedUser
+                                            };
+                                            res.send(this.success_response);
+                                        }
+                                    });
+                                }else{
+                                    // user does not have authorization
+                                    this.error_response = {
+                                        "status": 410,
+                                        "message": "NOT_AUTHORIZED"
+                                    };
+                                    res.json(this.error_response);
+                                }
+                            }
+                        });
+                    }
+                }
+            }).catch((err)=>{
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.json(this.error_response); 
+            })
+        }else{
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.json(this.error_response);
+        }             
     }
 
     /**
