@@ -75,6 +75,11 @@ export class ApiV1FigureRoute extends BaseRoute {
          router.put("/api/v1/figure", (req: Request, res: Response) =>{
             new ApiV1FigureRoute().update(req, res);
         });
+
+        // Delete figure
+        router.delete("/api/v1/figure", (req: Request, res: Response) =>{
+            new ApiV1FigureRoute().delete(req, res);
+        });
     }
 
     /**
@@ -201,6 +206,108 @@ export class ApiV1FigureRoute extends BaseRoute {
                     }).catch((err)=>{
                         res.json(err);
                     })              
+                }
+            }).catch((err)=>{
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.json(this.error_response); 
+            })
+        }else{
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.json(this.error_response);
+        }
+    }
+
+    /**
+     * 
+     * Method to delete figure.
+     * JWT Authorization needed.
+     * 
+     * @param req HEADER: JWTtoken(!). QUERY: figureId, createdBy(!). 
+     * @param res status
+     */
+    public delete(req: Request, res: Response){
+        if(req.headers['authorization'] && req.headers['authorization'] !== null){
+            let headerAuth:any = req.headers['authorization'];            
+            
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt)=>{
+                if(!jwt){
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.json(this.error_response);
+                }else{
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    
+                    // QUERY
+                    let createdBy:string = req.query.createdBy;
+                    let figureId:number = req.query.figureId;
+
+                    let QUERY:any = {};
+
+                    // Check if mandatory values exist
+                    if(figureId && figureId!==null){
+                        if(createdBy && createdBy!==null){
+                            QUERY = {
+                                _id:figureId,
+                                createdBy:createdBy                                
+                            }
+                        }else{
+                            QUERY = {
+                                _id:figureId
+                            }
+                        }
+
+                        /**
+                         * Delete permission roles: admin, admin, createdBy
+                         */
+                        this.populateFigure(QUERY).then((response:any)=>{
+                            if(response.status !== 200){
+                                res.json(response);
+                            }else{
+                                let figureContent: any = response.content[0];
+                                if(userRole == 1 || userRole == 2 || figureContent.createdBy == userID){
+                                    Figure.findOne(QUERY).remove().exec((err, data)=>{
+                                        if(err){
+                                            this.error_response = {
+                                                "status": 402,
+                                                "message":"DATABASE_ERROR"
+                                            };
+                                            res.json(this.error_response);
+                                        }else{
+                                            this.success_response = {
+                                                "status": 200,
+                                                "message": "FIGURE_DELETE_SUCCESS"
+                                            };
+                                            res.json(this.success_response);
+                                        }
+                                    });
+                                }else{
+                                    this.error_response = {
+                                        "status": 401,
+                                        "message": "NOT_AUTHORIZED"
+                                    };
+                                    res.json(this.error_response);
+                                }
+                            }
+                        }).catch(err=>{
+                            res.json(err);
+                        })
+                    }else{
+                        this.error_response = {
+                            "status": 307,
+                            "message":"QUERY_NOT_COMPLETE"
+                        };
+                        res.json(this.error_response);
+                    }
                 }
             }).catch((err)=>{
                 this.error_response = {
