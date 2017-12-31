@@ -8,7 +8,7 @@ export var storySchema: Schema = new Schema({
     parentId: String,
     figureId: String,
     enabled: Boolean,
-    description: String,
+    content: String,
     mediaType: String,
     mediaRef: String,
 });

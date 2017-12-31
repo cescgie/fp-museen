@@ -105,20 +105,17 @@ export class ApiV1StoryRoute extends BaseRoute {
                     let userRole = jwt.body.permissions;
 
                     // FORM BODY
-                    let name:string = req.body.name;
-                    let description:string = req.body.description;
+                    let content:string = req.body.content;
                     let figureId:string = req.body.figureId;
                     let parentId:string = req.body.parentId;
 
                     // Check if mandatory values exist
                     if( 
-                        name && name !==null &&
-                        description && description !==null &&
-                        parentId && parentId !== null &&
+                        content && content !==null &&
                         figureId && figureId !== null
                     ){
                         let story_data:IStory = {
-                            description:description,
+                            content:content,
                             createdBy:userID,
                             updatedBy:userID,
                             parentId:parentId,

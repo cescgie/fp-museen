@@ -6,7 +6,7 @@ export interface IStory {
     parentId?:string;
     figureId?:string;
     enabled?:boolean;
-    description?:string;
+    content?:string;
     mediaType?:string;
     mediaRef?:string;
 }
