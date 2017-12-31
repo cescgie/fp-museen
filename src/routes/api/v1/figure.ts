@@ -70,6 +70,11 @@ export class ApiV1FigureRoute extends BaseRoute {
         router.get("/api/v1/figure", (req: Request, res: Response) =>{
             new ApiV1FigureRoute().get(req, res);
         });
+
+         // Update Figure
+         router.put("/api/v1/figure", (req: Request, res: Response) =>{
+            new ApiV1FigureRoute().update(req, res);
+        });
     }
 
     /**
@@ -296,6 +301,124 @@ export class ApiV1FigureRoute extends BaseRoute {
                 });
             }
         });
+    }
+
+    /**
+     * Method to update figure.
+     * JWT Authorization needed.
+     * _id, createdBy, createdAt are not allowed to be updated
+     * 
+     * @param req HEADER: JWTtoken(!). QUERY: figureId(!). BODY: {dinamic properties}. 
+     * @param res status
+     */
+    public update(req: Request, res: Response){
+        if(req.headers['authorization'] && req.headers['authorization'] !== null){
+            let headerAuth:any = req.headers['authorization'];            
+            
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt)=>{
+                if(!jwt){
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.json(this.error_response);
+                }else{
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    // QUERY
+                    let figureId:string = req.query.figureId;
+                    
+                    // Check if mandatory values exist
+                    if( figureId ){
+                        this.populateFigure({_id:figureId}).then(respPopulateFigure=>{
+                            let figureContent = respPopulateFigure.content[0];
+
+                            /**
+                             * #RolePermission
+                             * Check role permission
+                             * Permission role: Admin, Master, createdBy
+                            */
+                            if(userRole == 1 || userRole == 2 || figureContent.createdBy == userID ){
+                                // Init all given req body parameters
+                                let arrayKey:any = [];
+                                for (var key in req.body) {
+                                    arrayKey.push(key);                    
+                                }
+                                // Avoid updating primary properties
+                                if (arrayKey.indexOf('createdAt') !== -1) {
+                                    arrayKey.splice(arrayKey.indexOf('createdAt'), 1);
+                                }
+                                if (arrayKey.indexOf('createdBy') !== -1) {
+                                    arrayKey.splice(arrayKey.indexOf('createdBy'), 1);
+                                }
+
+                                let data_toUpdate:any ={};
+                                // update only given req body parameters except primary properties
+                                for (let i = 0; i < arrayKey.length; i++) {
+                                    data_toUpdate[arrayKey[i]] = req.body[arrayKey[i]];                    
+                                }
+                                
+                                // update time
+                                data_toUpdate['updatedAt'] = new Date();
+                                data_toUpdate['updatedBy'] = userID; 
+                                   
+                                // Update figure
+                                figureContent.set(data_toUpdate);
+                                figureContent.save((err, updatedFigure)=> {
+                                    if(err){
+                                        this.error_response = {
+                                            "status": 309,
+                                            "message":"QUERY_ERROR",
+                                            "content": err.message
+                                        };
+                                        res.send(this.error_response);
+                                    }else{
+                                        this.success_response = {
+                                            "status": 200,
+                                            "message": "FIGURE_UPDATE_SUCCESS",
+                                            "content": updatedFigure
+                                        };
+                                        res.send(this.success_response);
+                                    }
+                                }); 
+                            }else{
+                                this.error_response = {
+                                    "status": 401,
+                                    "message": "NOT_AUTHORIZED"
+                                };
+                                res.json(this.error_response);
+                            }
+                        }).catch(err=>{
+                            this.error_response = {
+                                "status": 309,
+                                "message":"QUERY_ERROR",
+                                "content": err.message
+                            };
+                            res.send(this.error_response);
+                        })
+                    }else{
+                        this.error_response = {
+                            "status": 307,
+                            "message":"QUERY_NOT_COMPLETE"
+                        };
+                        res.json(this.error_response);
+                    }
+                }
+            }).catch((err)=>{
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.json(this.error_response); 
+            })
+        }else{
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.json(this.error_response);
+        }
     }
 
 }
