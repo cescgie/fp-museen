@@ -65,6 +65,11 @@ export class ApiV1FigureRoute extends BaseRoute {
         router.post("/api/v1/figure", (req: Request, res: Response, next: NextFunction) => {
             new ApiV1FigureRoute().create(req, res);
         });
+
+        // Get Figure(s)
+        router.get("/api/v1/figure", (req: Request, res: Response) =>{
+            new ApiV1FigureRoute().get(req, res);
+        });
     }
 
     /**
@@ -144,6 +149,71 @@ export class ApiV1FigureRoute extends BaseRoute {
     }
     
     /**
+     * Method to get figure(s) 
+     * JWT Authorization needed.
+     * 
+     * @param req HEADER: JWT Token(!). QUERY: createdBy, figureId
+     * @param res {status,message,content}
+     */
+    public get(req: Request, res: Response){
+        
+        if(req.headers['authorization'] && req.headers['authorization'] !== null){
+            let headerAuth:any = req.headers['authorization'];            
+            
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt)=>{
+                if(!jwt){
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.json(this.error_response);
+                }else{
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    // QUERY
+                    let createdBy:string = req.query.createdBy;
+                    let figureId:number = req.query.figureId;
+
+                    let QUERY:any = {};
+
+                    // Check if mandatory values exist
+                    if(figureId && figureId!==null){
+                        if(createdBy && createdBy!==null){
+                            QUERY = {
+                                _id:figureId,
+                                createdBy:createdBy                                
+                            }
+                        }else{
+                            QUERY = {
+                                _id:figureId
+                            }
+                        }
+                    }
+                    
+                    this.populateFigure(QUERY).then((response:any)=>{
+                        res.send(response);                            
+                    }).catch((err)=>{
+                        res.json(err);
+                    })              
+                }
+            }).catch((err)=>{
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.json(this.error_response); 
+            })
+        }else{
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.json(this.error_response);
+        }
+    }
+
+    /**
      * create new figure(!)
      */
     createFigure(figureData:IFigure, userID:string):Promise<any>{
@@ -169,4 +239,63 @@ export class ApiV1FigureRoute extends BaseRoute {
             });
         });
     }
+
+    /**
+     * Populate Figure
+     * @param QUERY 
+     */
+    populateFigure(QUERY?:any):Promise<any>{
+        return new Promise((resolve,reject)=>{
+            if(Object.keys(QUERY).length !== 0){
+                Figure.find(QUERY, null , {sort:{createdAt:-1}}, (err, figure)=> {
+                    if(err){
+                        this.error_response = {
+                            "status": 309,
+                            "message":"QUERY_ERROR",
+                            "content": err.message
+                        };
+                        reject(this.error_response);
+                    }else if(!figure || figure === null || figure.length < 1){
+                        this.error_response = {
+                            "status": 331,
+                            "message":"NO_FIGURE_FOUND"
+                        };
+                        reject(this.error_response);
+                    }else{
+                        this.success_response = {
+                            status:200,
+                            message:'FIGURE_READ_SUCCESS',
+                            content: figure
+                        }
+                        resolve(this.success_response)
+                    }
+                })
+            }else{
+                Figure.find({}, null , {sort:{createdAt:-1}},(err, figure)=> {
+                    if(err){
+                        this.error_response = {
+                            "status": 309,
+                            "message":"QUERY_ERROR",
+                            "content": err.message
+                        };
+                        reject(this.error_response);
+                    }else if(!figure || figure === null || figure.length < 1){
+                        this.error_response = {
+                            "status": 331,
+                            "message":"NO_FIGURE_FOUND"
+                        };
+                        reject(this.error_response);
+                    }else{
+                        this.success_response = {
+                            status:200,
+                            message:'FIGURE_READ_SUCCESS',
+                            content: figure
+                        }
+                        resolve(this.success_response)
+                    }
+                });
+            }
+        });
+    }
+
 }
