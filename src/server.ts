@@ -12,6 +12,7 @@ import { IndexRoute } from "./routes/index";
 
 //API V2
 import { ApiV1UserRoute } from "./routes/api/v1/user";
+import { ApiV1FigureRoute } from "./routes/api/v1/figure";
 
 //interfaces
 import { IUser } from "./interfaces/user"; //import IUser
@@ -86,7 +87,8 @@ export class Server {
 
     // API V1
     ApiV1UserRoute.create(router);
-
+    ApiV1FigureRoute.create(router);
+    
     //use router middleware
     this.app.use(router);
   }
