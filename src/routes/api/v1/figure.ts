@@ -33,6 +33,7 @@ const nJwt = require('njwt');
 const secureRandom = require('secure-random');
 
 import { ApiV1UserRoute } from "./user";
+import { ObjectId } from "bson";
 
 /**
  * / route
@@ -179,31 +180,14 @@ export class ApiV1FigureRoute extends BaseRoute {
                     // JWT BODY
                     let userID = jwt.body.sub;
                     let userRole = jwt.body.permissions;
+
                     // QUERY
-                    let createdBy:string = req.query.createdBy;
-                    let figureId:number = req.query.figureId;
-
-                    let QUERY:any = {};
-
-                    // Check if mandatory values exist
-                    if(figureId && figureId!==null){
-                        if(createdBy && createdBy!==null){
-                            QUERY = {
-                                _id:figureId,
-                                createdBy:createdBy                                
-                            }
-                        }else{
-                            QUERY = {
-                                _id:figureId
-                            }
-                        }
-                    }
-                    
-                    this.populateFigure(QUERY).then((response:any)=>{
-                        res.send(response);                            
-                    }).catch((err)=>{
-                        res.json(err);
-                    })              
+                    let req_query = req.query;
+                    this.getFigure(req_query).then(respGetFigure=>{
+                        res.send(respGetFigure);
+                    }).catch(err=>{
+                        res.send(err);
+                    })             
                 }
             }).catch((err)=>{
                 this.error_response = {
@@ -321,6 +305,62 @@ export class ApiV1FigureRoute extends BaseRoute {
             };
             res.json(this.error_response);
         }
+    }
+
+    getFigure(param:any):Promise<any>{
+        return new Promise((resolve,reject)=>{
+
+            let QUERY:any;
+            let MATCH: any = {};
+
+            if(param.createdBy && param.createdBy !== 'null' && param.createdBy !== undefined){
+                MATCH['createdBy'] = param.createdBy
+            }
+
+            if(param.updatedBy && param.updatedBy !== 'null' && param.updatedBy !== undefined){
+                MATCH['updatedBy'] = param.updatedBy
+            }
+
+            if(param.figureId && param.figureId !== 'null' && param.figureId !== undefined){
+                let id = param.figureId
+                MATCH['_id'] =  new ObjectId(id)
+            }
+
+            if(param.enabled && param.enabled !== 'null' && param.enabled !== undefined){
+                MATCH['enabled'] = JSON.parse(param.enabled)
+            }
+
+            QUERY = [
+                { $match: MATCH },
+            ];
+
+            this.populateFigureQuery(QUERY).then((response)=>{
+                resolve(response);
+            }).catch(err=>{
+                reject(err);
+            }) 
+        })
+    }
+
+    populateFigureQuery(QUERY:any):Promise<any>{
+        return new Promise((resolve,reject)=>{
+            Figure.aggregate(
+                QUERY, (err,result) =>{
+                    if(err){
+                        let options:any = {
+                            status: 404,
+                            message: err.message
+                        };
+                        reject(options);
+                    }else{
+                        let options:any = {
+                            status: 200,
+                            content: result
+                        };
+                        resolve(options);
+                    }
+                });
+        })
     }
 
     /**
