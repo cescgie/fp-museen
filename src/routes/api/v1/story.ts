@@ -3,9 +3,9 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { BaseRoute } from "../../route";
 
-import { IFigure } from "../../../interfaces/figure";
-import { figureSchema } from "../../../schemas/figure";
-import { IFigureModel } from '../../../models/figure';
+import { IStory } from "../../../interfaces/story";
+import { storySchema } from "../../../schemas/story";
+import { IStoryModel } from '../../../models/story';
 
 //use q promises
 global.Promise = require("q").Promise;
@@ -23,7 +23,7 @@ dotenv.load(); //load environment variables from .env into ENV (process.env).
 //connect to DB
 const MONGODB_CONNECTION: string = "mongodb://"+process.env.MONGO_USER+":"+process.env.MONGO_PASSWORD+"@"+process.env.MONGO_HOST+":"+process.env.MONGO_PORT+"/"+process.env.MONGO_DB;
 let connection: mongoose.Connection = mongoose.createConnection(MONGODB_CONNECTION, { useMongoClient: true });
-var Figure: mongoose.Model<IFigureModel> = connection.model<IFigureModel>("Figure", figureSchema);
+var Story: mongoose.Model<IStoryModel> = connection.model<IStoryModel>("Story", storySchema);
 
 const passwordHash = require('password-hash');
 
@@ -36,9 +36,9 @@ import { ApiV1UserRoute } from "./user";
 
 /**
  * / route
- * @class Figure
+ * @class Story
  */
-export class ApiV1FigureRoute extends BaseRoute {
+export class ApiV1StoryRoute extends BaseRoute {
     protected error_response:any;
     protected success_response:any;  
     protected secret_key:string;
@@ -51,37 +51,37 @@ export class ApiV1FigureRoute extends BaseRoute {
     /**
      * Create the routes.
      *
-     * @class ApiV1FigureRoute
+     * @class ApiV1StoryRoute
      * @method create
      * @static
      */
     public static create(router: Router) {
         //log
-        console.log("[ApiV1FigureRoute::create] Creating ApiV1FigureRoute route.");
+        console.log("[ApiV1StoryRoute::create] Creating ApiV1StoryRoute route.");
 
-        // Create figure
-        router.post("/api/v1/figure", (req: Request, res: Response, next: NextFunction) => {
-            new ApiV1FigureRoute().create(req, res);
+        // Create story
+        router.post("/api/v1/story", (req: Request, res: Response, next: NextFunction) => {
+            new ApiV1StoryRoute().create(req, res);
         });
 
-        // Get Figure(s)
-        router.get("/api/v1/figure", (req: Request, res: Response) =>{
-            new ApiV1FigureRoute().get(req, res);
+        // Get Story(s)
+        router.get("/api/v1/story", (req: Request, res: Response) =>{
+            new ApiV1StoryRoute().get(req, res);
         });
 
-         // Update Figure
-         router.put("/api/v1/figure", (req: Request, res: Response) =>{
-            new ApiV1FigureRoute().update(req, res);
+         // Update Story
+         router.put("/api/v1/story", (req: Request, res: Response) =>{
+            new ApiV1StoryRoute().update(req, res);
         });
 
-        // Delete figure
-        router.delete("/api/v1/figure", (req: Request, res: Response) =>{
-            new ApiV1FigureRoute().delete(req, res);
+        // Delete Story
+        router.delete("/api/v1/story", (req: Request, res: Response) =>{
+            new ApiV1StoryRoute().delete(req, res);
         });
     }
 
     /**
-     * Method to create figure.
+     * Method to create story.
      * JWT Authorization needed.
      * 
      * @param req HEADER: JWT Token(!). BODY: name, description
@@ -113,8 +113,7 @@ export class ApiV1FigureRoute extends BaseRoute {
                         name && name !==null &&
                         description && description !==null
                     ){
-                        let figure_data:IFigure = {
-                            name:name,
+                        let story_data:IStory = {
                             description:description,
                             createdBy:userID,
                             updatedBy:userID                                       
@@ -122,11 +121,11 @@ export class ApiV1FigureRoute extends BaseRoute {
 
                         /**
                          * TODO!
-                         * Read available uploaded image by path+userID+-figure
-                         * If exists, get filedir then rename file to path+userID+respCreateFigure.id
+                         * Read available uploaded image by path+userID+-story
+                         * If exists, get filedir then rename file to path+userID+respCreateStory.id
                          */
-                        this.createFigure(figure_data, userID).then(respCreateFigure=>{
-                            res.send(respCreateFigure);
+                        this.createStory(story_data, userID).then(respCreateStory=>{
+                            res.send(respCreateStory);
                         }).catch(err=>{
                             res.send(err);
                         })
@@ -157,10 +156,10 @@ export class ApiV1FigureRoute extends BaseRoute {
     }
     
     /**
-     * Method to get figure(s) 
+     * Method to get story(s) 
      * JWT Authorization needed.
      * 
-     * @param req HEADER: JWT Token(!). QUERY: createdBy, figureId
+     * @param req HEADER: JWT Token(!). QUERY: createdBy, storyId
      * @param res {status,message,content}
      */
     public get(req: Request, res: Response){
@@ -181,25 +180,25 @@ export class ApiV1FigureRoute extends BaseRoute {
                     let userRole = jwt.body.permissions;
                     // QUERY
                     let createdBy:string = req.query.createdBy;
-                    let figureId:number = req.query.figureId;
+                    let storyId:number = req.query.storyId;
 
                     let QUERY:any = {};
 
                     // Check if mandatory values exist
-                    if(figureId && figureId!==null){
+                    if(storyId && storyId!==null){
                         if(createdBy && createdBy!==null){
                             QUERY = {
-                                _id:figureId,
+                                _id:storyId,
                                 createdBy:createdBy                                
                             }
                         }else{
                             QUERY = {
-                                _id:figureId
+                                _id:storyId
                             }
                         }
                     }
                     
-                    this.populateFigure(QUERY).then((response:any)=>{
+                    this.populateStory(QUERY).then((response:any)=>{
                         res.send(response);                            
                     }).catch((err)=>{
                         res.json(err);
@@ -223,10 +222,10 @@ export class ApiV1FigureRoute extends BaseRoute {
 
     /**
      * 
-     * Method to delete figure.
+     * Method to delete story.
      * JWT Authorization needed.
      * 
-     * @param req HEADER: JWTtoken(!). QUERY: figureId, createdBy(!). 
+     * @param req HEADER: JWTtoken(!). QUERY: storyId, createdBy(!). 
      * @param res status
      */
     public delete(req: Request, res: Response){
@@ -247,33 +246,33 @@ export class ApiV1FigureRoute extends BaseRoute {
                     
                     // QUERY
                     let createdBy:string = req.query.createdBy;
-                    let figureId:number = req.query.figureId;
+                    let storyId:number = req.query.storyId;
 
                     let QUERY:any = {};
 
                     // Check if mandatory values exist
-                    if(figureId && figureId!==null){
+                    if(storyId && storyId!==null){
                         if(createdBy && createdBy!==null){
                             QUERY = {
-                                _id:figureId,
+                                _id:storyId,
                                 createdBy:createdBy                                
                             }
                         }else{
                             QUERY = {
-                                _id:figureId
+                                _id:storyId
                             }
                         }
 
                         /**
                          * Delete permission roles: admin, admin, createdBy
                          */
-                        this.populateFigure(QUERY).then((response:any)=>{
+                        this.populateStory(QUERY).then((response:any)=>{
                             if(response.status !== 200){
                                 res.json(response);
                             }else{
-                                let figureContent: any = response.content[0];
-                                if(userRole == 1 || userRole == 2 || figureContent.createdBy == userID){
-                                    Figure.findOne(QUERY).remove().exec((err, data)=>{
+                                let storyContent: any = response.content[0];
+                                if(userRole == 1 || userRole == 2 || storyContent.createdBy == userID){
+                                    Story.findOne(QUERY).remove().exec((err, data)=>{
                                         if(err){
                                             this.error_response = {
                                                 "status": 402,
@@ -283,7 +282,7 @@ export class ApiV1FigureRoute extends BaseRoute {
                                         }else{
                                             this.success_response = {
                                                 "status": 200,
-                                                "message": "FIGURE_DELETE_SUCCESS"
+                                                "message": "STORY_DELETE_SUCCESS"
                                             };
                                             res.json(this.success_response);
                                         }
@@ -324,13 +323,13 @@ export class ApiV1FigureRoute extends BaseRoute {
     }
 
     /**
-     * create new figure(!)
+     * create new story(!)
      */
-    createFigure(figureData:IFigure, userID:string):Promise<any>{
+    createStory(storyData:IStory, userID:string):Promise<any>{
         return new Promise((resolve,reject)=>{
-            //save figureData to DB
-            let figure_model = new Figure(figureData)
-            figure_model.save((err, createdFigure)=>{
+            //save storyData to DB
+            let story_model = new Story(storyData)
+            story_model.save((err, createdStory)=>{
                 if(err){
                     this.error_response = {
                         "status": 309,
@@ -341,8 +340,8 @@ export class ApiV1FigureRoute extends BaseRoute {
                 }else{
                     this.success_response = {
                         "status": 200,
-                        "message": "FIGURE_CREATE_SUCCESS",
-                        "content": createdFigure
+                        "message": "STORY_CREATE_SUCCESS",
+                        "content": createdStory
                     };
                     resolve(this.success_response);
                 }
@@ -351,13 +350,13 @@ export class ApiV1FigureRoute extends BaseRoute {
     }
 
     /**
-     * Populate Figure
+     * Populate Story
      * @param QUERY 
      */
-    populateFigure(QUERY?:any):Promise<any>{
+    populateStory(QUERY?:any):Promise<any>{
         return new Promise((resolve,reject)=>{
             if(Object.keys(QUERY).length !== 0){
-                Figure.find(QUERY, null , {sort:{createdAt:-1}}, (err, figure)=> {
+                Story.find(QUERY, null , {sort:{createdAt:-1}}, (err, story)=> {
                     if(err){
                         this.error_response = {
                             "status": 309,
@@ -365,23 +364,23 @@ export class ApiV1FigureRoute extends BaseRoute {
                             "content": err.message
                         };
                         reject(this.error_response);
-                    }else if(!figure || figure === null || figure.length < 1){
+                    }else if(!story || story === null || story.length < 1){
                         this.error_response = {
                             "status": 331,
-                            "message":"NO_FIGURE_FOUND"
+                            "message":"NO_STORY_FOUND"
                         };
                         reject(this.error_response);
                     }else{
                         this.success_response = {
                             status:200,
-                            message:'FIGURE_READ_SUCCESS',
-                            content: figure
+                            message:'STORY_READ_SUCCESS',
+                            content: story
                         }
                         resolve(this.success_response)
                     }
                 })
             }else{
-                Figure.find({}, null , {sort:{createdAt:-1}},(err, figure)=> {
+                Story.find({}, null , {sort:{createdAt:-1}},(err, story)=> {
                     if(err){
                         this.error_response = {
                             "status": 309,
@@ -389,17 +388,17 @@ export class ApiV1FigureRoute extends BaseRoute {
                             "content": err.message
                         };
                         reject(this.error_response);
-                    }else if(!figure || figure === null || figure.length < 1){
+                    }else if(!story || story === null || story.length < 1){
                         this.error_response = {
                             "status": 331,
-                            "message":"NO_FIGURE_FOUND"
+                            "message":"NO_STORY_FOUND"
                         };
                         reject(this.error_response);
                     }else{
                         this.success_response = {
                             status:200,
-                            message:'FIGURE_READ_SUCCESS',
-                            content: figure
+                            message:'STORY_READ_SUCCESS',
+                            content: story
                         }
                         resolve(this.success_response)
                     }
@@ -409,11 +408,11 @@ export class ApiV1FigureRoute extends BaseRoute {
     }
 
     /**
-     * Method to update figure.
+     * Method to update story.
      * JWT Authorization needed.
      * _id, createdBy, createdAt are not allowed to be updated
      * 
-     * @param req HEADER: JWTtoken(!). QUERY: figureId(!). BODY: {dinamic properties}. 
+     * @param req HEADER: JWTtoken(!). QUERY: storyId(!). BODY: {dinamic properties}. 
      * @param res status
      */
     public update(req: Request, res: Response){
@@ -432,19 +431,19 @@ export class ApiV1FigureRoute extends BaseRoute {
                     let userID = jwt.body.sub;
                     let userRole = jwt.body.permissions;
                     // QUERY
-                    let figureId:string = req.query.figureId;
+                    let storyId:string = req.query.storyId;
                     
                     // Check if mandatory values exist
-                    if( figureId ){
-                        this.populateFigure({_id:figureId}).then(respPopulateFigure=>{
-                            let figureContent = respPopulateFigure.content[0];
+                    if( storyId ){
+                        this.populateStory({_id:storyId}).then(respPopulateStory=>{
+                            let storyContent = respPopulateStory.content[0];
 
                             /**
                              * #RolePermission
                              * Check role permission
                              * Permission role: Admin, Master, createdBy
                             */
-                            if(userRole == 1 || userRole == 2 || figureContent.createdBy == userID ){
+                            if(userRole == 1 || userRole == 2 || storyContent.createdBy == userID ){
                                 // Init all given req body parameters
                                 let arrayKey:any = [];
                                 for (var key in req.body) {
@@ -468,9 +467,9 @@ export class ApiV1FigureRoute extends BaseRoute {
                                 data_toUpdate['updatedAt'] = new Date();
                                 data_toUpdate['updatedBy'] = userID; 
                                    
-                                // Update figure
-                                figureContent.set(data_toUpdate);
-                                figureContent.save((err, updatedFigure)=> {
+                                // Update story
+                                storyContent.set(data_toUpdate);
+                                storyContent.save((err, updatedStory)=> {
                                     if(err){
                                         this.error_response = {
                                             "status": 309,
@@ -481,8 +480,8 @@ export class ApiV1FigureRoute extends BaseRoute {
                                     }else{
                                         this.success_response = {
                                             "status": 200,
-                                            "message": "FIGURE_UPDATE_SUCCESS",
-                                            "content": updatedFigure
+                                            "message": "STORY_UPDATE_SUCCESS",
+                                            "content": updatedStory
                                         };
                                         res.send(this.success_response);
                                     }

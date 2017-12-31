@@ -10,9 +10,10 @@ import mongoose = require("mongoose"); //import mongoose
 //routes
 import { IndexRoute } from "./routes/index";
 
-//API V2
+//API V1
 import { ApiV1UserRoute } from "./routes/api/v1/user";
 import { ApiV1FigureRoute } from "./routes/api/v1/figure";
+import { ApiV1StoryRoute } from "./routes/api/v1/story";
 
 //interfaces
 import { IUser } from "./interfaces/user"; //import IUser
@@ -88,7 +89,8 @@ export class Server {
     // API V1
     ApiV1UserRoute.create(router);
     ApiV1FigureRoute.create(router);
-    
+    ApiV1StoryRoute.create(router);
+
     //use router middleware
     this.app.use(router);
   }
