@@ -107,16 +107,22 @@ export class ApiV1StoryRoute extends BaseRoute {
                     // FORM BODY
                     let name:string = req.body.name;
                     let description:string = req.body.description;
+                    let figureId:string = req.body.figureId;
+                    let parentId:string = req.body.parentId;
 
                     // Check if mandatory values exist
                     if( 
                         name && name !==null &&
-                        description && description !==null
+                        description && description !==null &&
+                        parentId && parentId !== null &&
+                        figureId && figureId !== null
                     ){
                         let story_data:IStory = {
                             description:description,
                             createdBy:userID,
-                            updatedBy:userID                                       
+                            updatedBy:userID,
+                            parentId:parentId,
+                            figureId:figureId                                       
                         };
 
                         /**

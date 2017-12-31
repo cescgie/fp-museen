@@ -5,6 +5,8 @@ export var storySchema: Schema = new Schema({
     createdAt: Date,
     updatedBy: String,
     createdBy: String,
+    parentId: String,
+    figureId: String,
     enabled: Boolean,
     description: String,
     mediaType: String,

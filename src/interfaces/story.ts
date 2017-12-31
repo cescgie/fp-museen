@@ -3,6 +3,8 @@ export interface IStory {
     createdBy?:string;    
     updatedAt?:any;    
     updatedBy?:string;
+    parentId?:string;
+    figureId?:string;
     enabled?:boolean;
     description?:string;
     mediaType?:string;
