@@ -8,6 +8,8 @@ export var figureSchema: Schema = new Schema({
     name: String,
     enabled: Boolean,
     description: String,
+    category: Number,
+    subcategory: Array,
     mediaType: String,
     mediaRef: String,
 });
