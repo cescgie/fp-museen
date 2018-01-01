@@ -161,7 +161,7 @@ export class ApiV1FigureRoute extends BaseRoute {
      * Method to get figure(s) 
      * JWT Authorization needed.
      * 
-     * @param req HEADER: JWT Token(!). QUERY: createdBy, figureId
+     * @param req HEADER: JWT Token(!). QUERY: createdBy, figureId, createdBy, createdAt, enabled
      * @param res {status,message,content}
      */
     public get(req: Request, res: Response){

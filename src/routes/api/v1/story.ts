@@ -33,6 +33,7 @@ const nJwt = require('njwt');
 const secureRandom = require('secure-random');
 
 import { ApiV1UserRoute } from "./user";
+import { ObjectId } from "bson";
 
 /**
  * / route
@@ -162,7 +163,7 @@ export class ApiV1StoryRoute extends BaseRoute {
      * Method to get story(s) 
      * JWT Authorization needed.
      * 
-     * @param req HEADER: JWT Token(!). QUERY: createdBy, storyId
+     * @param req HEADER: JWT Token(!). QUERY: createdBy, storyId, figureId, createdBy, createdAt, enabled
      * @param res {status,message,content}
      */
     public get(req: Request, res: Response){
@@ -182,30 +183,13 @@ export class ApiV1StoryRoute extends BaseRoute {
                     let userID = jwt.body.sub;
                     let userRole = jwt.body.permissions;
                     // QUERY
-                    let createdBy:string = req.query.createdBy;
-                    let storyId:number = req.query.storyId;
-
-                    let QUERY:any = {};
-
-                    // Check if mandatory values exist
-                    if(storyId && storyId!==null){
-                        if(createdBy && createdBy!==null){
-                            QUERY = {
-                                _id:storyId,
-                                createdBy:createdBy                                
-                            }
-                        }else{
-                            QUERY = {
-                                _id:storyId
-                            }
-                        }
-                    }
-                    
-                    this.populateStory(QUERY).then((response:any)=>{
-                        res.send(response);                            
-                    }).catch((err)=>{
-                        res.json(err);
-                    })              
+                    let req_query = req.query;
+                    this.getStory(req_query).then(respGetStory=>{
+                        res.send(respGetStory);
+                    }).catch(err=>{
+                        res.send(err);
+                    })
+                                 
                 }
             }).catch((err)=>{
                 this.error_response = {
@@ -221,6 +205,66 @@ export class ApiV1StoryRoute extends BaseRoute {
             };
             res.json(this.error_response);
         }
+    }
+
+    getStory(param:any):Promise<any>{
+        return new Promise((resolve,reject)=>{
+
+            let QUERY:any;
+            let MATCH: any = {};
+
+            if(param.createdBy && param.createdBy !== 'null' && param.createdBy !== undefined){
+                MATCH['createdBy'] = param.createdBy
+            }
+
+            if(param.updatedBy && param.updatedBy !== 'null' && param.updatedBy !== undefined){
+                MATCH['updatedBy'] = param.updatedBy
+            }
+
+            if(param.figureId && param.figureId !== 'null' && param.figureId !== undefined){
+                MATCH['figureId'] = param.figureId
+            }
+
+            if(param.storyId && param.storyId !== 'null' && param.storyId !== undefined){
+                let id = param.storyId
+                MATCH['_id'] =  new ObjectId(id)
+            }
+
+            if(param.enabled && param.enabled !== 'null' && param.enabled !== undefined){
+                MATCH['enabled'] = JSON.parse(param.enabled)
+            }
+
+            QUERY = [
+                { $match: MATCH },
+            ];
+
+            this.populateStoryQuery(QUERY).then((response)=>{
+                resolve(response);
+            }).catch(err=>{
+                reject(err);
+            }) 
+        })
+    }
+
+    populateStoryQuery(QUERY:any):Promise<any>{
+        return new Promise((resolve,reject)=>{
+            Story.aggregate(
+                QUERY, (err,result) =>{
+                    if(err){
+                        let options:any = {
+                            status: 404,
+                            message: err.message
+                        };
+                        reject(options);
+                    }else{
+                        let options:any = {
+                            status: 200,
+                            content: result
+                        };
+                        resolve(options);
+                    }
+                });
+        })
     }
 
     /**
