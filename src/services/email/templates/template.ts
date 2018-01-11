@@ -16,7 +16,7 @@ import { SendGridContent, SendGridResponse } from "../send-grid";
 export abstract class EmailTemplate {
 
   //the email dist path
-  public static DIST_PATH: string = "node_modules/fp-museen-mailer/dist";
+  public static DIST_PATH: string = "node_modules/foundation-emails-template/dist";
 
   //the email
   public email: Email;
