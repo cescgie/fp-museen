@@ -18,6 +18,8 @@
         "dotenv": "^4.0.0",
         "errorhandler": "^1.4.3",
         "express": "^4.14.0",
+        "foundation-emails-template": "git+ssh://git@github.com:cescgie/fp-museen-mailer.git",
+        "fs": "0.0.1-security",
         "method-override": "^2.3.6",
         "mongoose": "^4.6.7",
         "morgan": "^1.7.0",
