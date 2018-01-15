@@ -7,3 +7,4 @@ log/*
 *.log
 typings
 .DS_Store
+public/figure/*

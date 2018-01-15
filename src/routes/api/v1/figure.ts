@@ -35,6 +35,9 @@ const secureRandom = require('secure-random');
 import { ApiV1UserRoute } from "./user";
 import { ObjectId } from "bson";
 
+import imageType = require('image-type');
+import fs = require('fs');
+
 /**
  * / route
  * @class Figure
@@ -79,6 +82,167 @@ export class ApiV1FigureRoute extends BaseRoute {
         router.delete("/api/v1/figure", (req: Request, res: Response) =>{
             new ApiV1FigureRoute().delete(req, res);
         });
+
+        // Post new image
+        router.post("/api/v1/figure/image", (req: Request, res: Response) => {
+            new ApiV1FigureRoute().postImage(req, res);
+        });
+    }
+
+    /**
+     * Method to post figure image 
+     * JWT Authorization needed.
+     * 
+     * @param req HEADER: JWT Token(!) 
+     * @param res {status,message,content}
+     */
+    public postImage(req: Request, res: Response) {
+
+        if (req.headers['authorization'] && req.headers['authorization'] !== null) {
+            let headerAuth: any = req.headers['authorization'];
+            let campaignId: any = req.headers['campaignid'];
+
+
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt) => {
+                if (!jwt) {
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.status(this.error_response.status).json(this.error_response);
+                } else {
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    // QUERY
+                    let userid: string = userID;
+                    this.saveFile(req, res, 0, 15 * 1024 * 1024).then(response => {
+                        console.log('Success', response);
+                        res.json(this.success_response);
+                    }).catch(err => {
+                        console.log("Error", err);
+                        res.send(err);
+                    })
+
+                }
+            }).catch((err) => {
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.status(this.error_response.status).json(this.error_response);
+            })
+        } else {
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.status(this.error_response.status).json(this.error_response);
+        }
+
+    }
+
+    private authenticateBuffer(buffer) {
+        var type = imageType(buffer),
+            ret = false;
+        if (type) {
+            ret = true;
+        }
+        return ret;
+    }
+
+    private saveFile(req: any, res: Response, minsize, maxsize) {
+        return new Promise((resolve, reject) => {
+            req.file = {};
+
+            req.busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
+                if (!filename) {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_NO_FILE"
+                    };
+                    reject(this.error_response);
+                }
+
+                file.fileRead = [];
+
+                file.on('limit', function() {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_FILE_TOO_BIG"
+                    };
+                    reject(this.error_response);
+                });
+
+                file.on('data', function(chunk) {
+                    this.fileRead.push(chunk);
+                });
+
+                file.on('error', function(err) {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_READING_FILE"
+                    };
+                    reject(this.error_response);
+                });
+
+                file.on('end', function() {
+                    var finalBuffer = Buffer.concat(this.fileRead);
+                    var length = finalBuffer.length;
+                    if (length > maxsize) {
+                        this.error_response = {
+                            "status": 314,
+                            "message": "ERROR_FILE_TOO_BIG"
+                        };
+                        reject(this.error_response);
+                        return;
+                    }
+                    if (length < minsize) {
+                        this.error_response = {
+                            "status": 314,
+                            "message": "ERROR_FILE_TOO_SMALL"
+                        };
+                        reject(this.error_response);
+                        return;
+                    }
+                    req.file["image"] = {
+                        buffer: finalBuffer,
+                        size: finalBuffer.length,
+                        filename: filename,
+                        mimetype: mimetype
+                    };
+                });
+
+            });
+
+            req.busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
+                req.file[fieldname] = val;
+            });
+
+            req.busboy.on('finish', (key, value) => {
+                if (!this.authenticateBuffer(req.file["image"].buffer)) {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_UNDEFINED_FILE"
+                    };
+                    reject(this.error_response);
+                }
+
+                let filedir = process.env.FIGURE_IMAGE_DIR + req.file["image"].filename;
+
+                fs.writeFile(filedir, req.file.image.buffer, (err) => {
+                    this.success_response = {
+                        "status": 200,
+                        "message": "UPLOAD_FIGURE_IMAGE_SUCCESS"
+                    };
+                    resolve(this.success_response);
+                });
+            });
+
+            req.pipe(req.busboy);
+
+        });
+
     }
 
     /**

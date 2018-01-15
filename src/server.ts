@@ -27,7 +27,12 @@ import { userSchema } from "./schemas/user"; //import userSchema
 
 //load environment variables from .env into ENV (process.env).
 const dotenv = require('dotenv');
-dotenv.load(); //load environment variables from .env into ENV (process.env).
+const session = require("express-session");
+const fs = require('fs');
+const morgan = require('morgan');
+const rfs = require('rotating-file-stream');
+const flash = require('connect-flash');
+const busboy = require('connect-busboy');
 
 import * as cors from "cors";
 
@@ -104,6 +109,8 @@ export class Server {
    * @method config
    */
   public config() {
+    //load environment variables from .env into ENV (process.env).
+    dotenv.load();
 
     // npm cors
     this.app.use(cors());
@@ -144,6 +151,8 @@ export class Server {
     //create models
     this.model.user = connection.model<IUserModel>("User", userSchema);
 
+    this.app.use(flash());
+
     // catch 404 and forward to error handler
     this.app.use(function(err: any, req: express.Request, res: express.Response, next: express.NextFunction) {
         err.status = 404;
@@ -152,6 +161,13 @@ export class Server {
 
     //error handling
     this.app.use(errorHandler());
+
+    //inis busboy to limit upload
+    this.app.use(busboy({
+      limits: {
+          fileSize: 15 * 1024 * 1024
+      }
+    }));
   }
 
   /**
