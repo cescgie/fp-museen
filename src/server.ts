@@ -118,7 +118,7 @@ export class Server {
     const MONGODB_CONNECTION: string = "mongodb://"+process.env.MONGO_USER+":"+process.env.MONGO_PASSWORD+"@"+process.env.MONGO_HOST+":"+process.env.MONGO_PORT+"/"+process.env.MONGO_DB;
     
     //add static paths
-    this.app.use(express.static(path.join(__dirname, "public")));
+    this.app.use("/assets", express.static(path.join(__dirname, "public")));
 
     //configure pug
     this.app.set("views", path.join(__dirname, "views"));

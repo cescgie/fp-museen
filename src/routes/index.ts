@@ -52,7 +52,7 @@ export class IndexRoute extends BaseRoute {
     let options: Object = {
       "message": "Welcome to the Tour of Heros"   
     };
-
+    
     //render template
     this.render(req, res, "index", options);
   }
