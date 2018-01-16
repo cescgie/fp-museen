@@ -8,3 +8,4 @@ log/*
 typings
 .DS_Store
 public/figure/*
+public/story/*

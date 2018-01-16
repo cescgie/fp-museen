@@ -365,6 +365,8 @@ export class ApiV1FigureRoute extends BaseRoute {
                         };
 
                         /**
+                         * TODO
+                         * - Other medias
                          * Read available uploaded image by path+userID+
                          * If exists, get folderPath then rename file to path+respCreateFigure.id
                          */

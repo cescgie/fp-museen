@@ -35,6 +35,10 @@ const secureRandom = require('secure-random');
 import { ApiV1UserRoute } from "./user";
 import { ObjectId } from "bson";
 
+import imageType = require('image-type');
+import fs = require('fs');
+const rimraf = require('rimraf');
+
 /**
  * / route
  * @class Story
@@ -48,6 +52,10 @@ export class ApiV1StoryRoute extends BaseRoute {
 
     private lib:Library = new Library();
     private _apiV1UserRoute:ApiV1UserRoute = new ApiV1UserRoute();
+
+    private mediaFolder: any = ['image','video','dimage'];
+    
+    imageDir:string = process.env.ASSETS_IMAGE_DIR+'/story/'
 
     /**
      * Create the routes.
@@ -79,6 +87,243 @@ export class ApiV1StoryRoute extends BaseRoute {
         router.delete("/api/v1/story", (req: Request, res: Response) =>{
             new ApiV1StoryRoute().delete(req, res);
         });
+
+        // Post new image
+        router.post("/api/v1/story/image", (req: Request, res: Response) => {
+            new ApiV1StoryRoute().postImage(req, res);
+        });
+
+        // Get all medias by reference in folder
+        router.get("/api/v1/story/media", (req: Request, res: Response) => {
+            new ApiV1StoryRoute().getMedia(req, res);
+        });
+    }
+
+    /**
+     * Method to post figure image 
+     * JWT Authorization needed.
+     * 
+     * @param req HEADER: JWT Token(!) 
+     * @param res {status,message,content}
+     */
+    public getMedia(req: Request, res: Response) {
+        if (req.headers['authorization'] && req.headers['authorization'] !== null) {
+            let headerAuth: any = req.headers['authorization'];
+            let campaignId: any = req.headers['campaignid'];
+
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt) => {
+                if (!jwt) {
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.status(this.error_response.status).json(this.error_response);
+                } else {
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    // HEADER QUERY
+                    let figureId:number = req.query.figureId;
+
+                    let folders: any = this.mediaFolder;
+                    let read = (dir) =>
+                    fs.readdirSync(dir)
+                        .reduce((files, file) =>
+                            files.concat(file),
+                        []);
+
+                    let readFolder: any = {};
+                    folders.forEach(element => {
+                        readFolder[element] = []
+                        let mediaFolder = this.imageDir + figureId
+                        let elementFolder = mediaFolder + '/' + element
+                        if (fs.existsSync(elementFolder)) {
+                            readFolder[element] = read(elementFolder)
+                        }
+                    });
+
+                    this.success_response = {
+                        "status": 200,
+                        "message": "READ_MEDIA_SUCCESS",
+                        "content": readFolder
+                    };
+
+                    res.send(this.success_response);
+                }
+            }).catch((err) => {
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.status(this.error_response.status).json(this.error_response);
+            })
+        } else {
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.status(this.error_response.status).json(this.error_response);
+        }
+    }
+
+     /**
+     * Method to post story image 
+     * JWT Authorization needed.
+     * 
+     * @param req HEADER: JWT Token(!) 
+     * @param res {status,message,content}
+     */
+    public postImage(req: Request, res: Response) {
+
+        if (req.headers['authorization'] && req.headers['authorization'] !== null) {
+            let headerAuth: any = req.headers['authorization'];
+            let campaignId: any = req.headers['campaignid'];
+
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt) => {
+                if (!jwt) {
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.status(this.error_response.status).json(this.error_response);
+                } else {
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    // SAVE FILE
+                    this.saveFile(req, res, 0, 15 * 1024 * 1024, userID).then(response => {
+                        res.json(this.success_response);
+                    }).catch(err => {
+                        res.send(err);
+                    })
+
+                }
+            }).catch((err) => {
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.status(this.error_response.status).json(this.error_response);
+            })
+        } else {
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.status(this.error_response.status).json(this.error_response);
+        }
+
+    }
+
+    private authenticateBuffer(buffer) {
+        var type = imageType(buffer),
+            ret = false;
+        if (type) {
+            ret = true;
+        }
+        return ret;
+    }
+
+    private saveFile(req: any, res: Response, minsize, maxsize, userID) {
+        return new Promise((resolve, reject) => {
+            req.file = {};
+            req.busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
+                if (!filename) {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_NO_FILE"
+                    };
+                    reject(this.error_response);
+                }
+
+                file.fileRead = [];
+
+                file.on('limit', function() {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_FILE_TOO_BIG"
+                    };
+                    reject(this.error_response);
+                });
+
+                file.on('data', function(chunk) {
+                    this.fileRead.push(chunk);
+                });
+
+                file.on('error', function(err) {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_READING_FILE"
+                    };
+                    reject(this.error_response);
+                });
+
+                file.on('end', function() {
+                    var finalBuffer = Buffer.concat(this.fileRead);
+                    var length = finalBuffer.length;
+                    if (length > maxsize) {
+                        this.error_response = {
+                            "status": 314,
+                            "message": "ERROR_FILE_TOO_BIG"
+                        };
+                        reject(this.error_response);
+                        return;
+                    }
+                    if (length < minsize) {
+                        this.error_response = {
+                            "status": 314,
+                            "message": "ERROR_FILE_TOO_SMALL"
+                        };
+                        reject(this.error_response);
+                        return;
+                    }
+                    req.file["image"] = {
+                        buffer: finalBuffer,
+                        size: finalBuffer.length,
+                        filename: filename,
+                        mimetype: mimetype
+                    };
+                });
+
+            });
+
+            req.busboy.on('field', function(fieldname, val, fieldnameTruncated, valTruncated, encoding, mimetype) {
+                req.file[fieldname] = val;
+            });
+
+            req.busboy.on('finish', (key, value) => {
+                if (!this.authenticateBuffer(req.file["image"].buffer)) {
+                    this.error_response = {
+                        "status": 314,
+                        "message": "ERROR_UNDEFINED_FILE"
+                    };
+                    reject(this.error_response);
+                }
+
+                let newUserFolder = this.imageDir + userID 
+                if (!fs.existsSync(newUserFolder)){
+                    fs.mkdirSync(newUserFolder);
+                }
+                let newImageFolder = newUserFolder +'/image'
+                if (!fs.existsSync(newImageFolder)){
+                    fs.mkdirSync(newImageFolder);
+                }
+
+                let filedir = newImageFolder + '/' + req.file["image"].filename;
+
+                fs.writeFile(filedir, req.file.image.buffer, (err) => {
+                    this.success_response = {
+                        "status": 200,
+                        "message": "UPLOAD_FIGURE_IMAGE_SUCCESS"
+                    };
+                    resolve(this.success_response);
+                });
+            });
+
+            req.pipe(req.busboy);
+
+        });
+
     }
 
     /**
@@ -124,15 +369,44 @@ export class ApiV1StoryRoute extends BaseRoute {
                         };
 
                         /**
-                         * TODO!
-                         * Read available uploaded image by path+userID+-story
+                         * TODO
+                         * - Other medias
+                         * Read available uploaded image by path+userID+
                          * If exists, get filedir then rename file to path+userID+respCreateStory.id
                          */
-                        this.createStory(story_data, userID).then(respCreateStory=>{
-                            res.send(respCreateStory);
-                        }).catch(err=>{
-                            res.send(err);
-                        })
+                        let folderPath = this.imageDir + userID
+
+                        if (fs.existsSync(folderPath)) {
+                            this.createStory(story_data, userID).then(respCreateStory=>{
+
+                                let newFolderDir = this.imageDir + respCreateStory.content._id 
+                                
+                                if (!fs.existsSync(newFolderDir)){
+                                    fs.mkdirSync(newFolderDir);
+                                }
+
+                                fs.rename(folderPath, newFolderDir, (err) => {
+                                    if (err) {
+                                        this.error_response = {
+                                            "status": 309,
+                                            "message": "RENAME_FOLDER_ERROR",
+                                            "content": err.message
+                                        };
+                                        res.json(this.error_response);
+                                    }else{
+                                        res.send(respCreateStory);
+                                    }
+                                });
+                            }).catch(err=>{
+                                res.send(err);
+                            })
+                        }else{
+                            this.error_response = {
+                                "status": 307,
+                                "message": "NO_IMAGE_UPLOADED"
+                            };
+                            res.json(this.error_response);
+                        }
 
                     }else{
                         this.error_response = {
@@ -156,7 +430,6 @@ export class ApiV1StoryRoute extends BaseRoute {
             };
             res.json(this.error_response);
         }
-        
     }
     
     /**
