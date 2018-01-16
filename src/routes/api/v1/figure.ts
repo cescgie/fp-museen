@@ -616,6 +616,7 @@ export class ApiV1FigureRoute extends BaseRoute {
 
             QUERY = [
                 { $match: MATCH },
+                { $sort:{'createdAt':-1}}
             ];
 
             this.populateFigureQuery(QUERY).then((response)=>{

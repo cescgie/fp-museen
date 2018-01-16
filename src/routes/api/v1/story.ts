@@ -509,6 +509,7 @@ export class ApiV1StoryRoute extends BaseRoute {
 
             QUERY = [
                 { $match: MATCH },
+                { $sort:{'createdAt':-1}}
             ];
 
             this.populateStoryQuery(QUERY).then((response)=>{
