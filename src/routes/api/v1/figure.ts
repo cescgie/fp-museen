@@ -115,13 +115,10 @@ export class ApiV1FigureRoute extends BaseRoute {
                     // JWT BODY
                     let userID = jwt.body.sub;
                     let userRole = jwt.body.permissions;
-                    // QUERY
-                    let userid: string = userID;
-                    this.saveFile(req, res, 0, 15 * 1024 * 1024).then(response => {
-                        console.log('Success', response);
+                    // SAVE FILE
+                    this.saveFile(req, res, 0, 15 * 1024 * 1024, userID).then(response => {
                         res.json(this.success_response);
                     }).catch(err => {
-                        console.log("Error", err);
                         res.send(err);
                     })
 
@@ -152,7 +149,7 @@ export class ApiV1FigureRoute extends BaseRoute {
         return ret;
     }
 
-    private saveFile(req: any, res: Response, minsize, maxsize) {
+    private saveFile(req: any, res: Response, minsize, maxsize, userID) {
         return new Promise((resolve, reject) => {
             req.file = {};
             req.busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
@@ -228,8 +225,14 @@ export class ApiV1FigureRoute extends BaseRoute {
                     reject(this.error_response);
                 }
 
-                let filedir = process.env.FIGURE_IMAGE_DIR + req.file["image"].filename;
-                
+                let newFileDir = process.env.FIGURE_IMAGE_DIR + userID +'/'  
+                                    
+                if (!fs.existsSync(newFileDir)){
+                    fs.mkdirSync(newFileDir);
+                }
+
+                let filedir = newFileDir + req.file["image"].filename;
+
                 fs.writeFile(filedir, req.file.image.buffer, (err) => {
                     this.success_response = {
                         "status": 200,
