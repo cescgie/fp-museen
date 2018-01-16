@@ -225,13 +225,16 @@ export class ApiV1FigureRoute extends BaseRoute {
                     reject(this.error_response);
                 }
 
-                let newFileDir = process.env.FIGURE_IMAGE_DIR + userID +'/'  
-                                    
-                if (!fs.existsSync(newFileDir)){
-                    fs.mkdirSync(newFileDir);
+                let newUserFolder = process.env.FIGURE_IMAGE_DIR + userID 
+                if (!fs.existsSync(newUserFolder)){
+                    fs.mkdirSync(newUserFolder);
+                }
+                let newImageFolder = newUserFolder +'/image'
+                if (!fs.existsSync(newImageFolder)){
+                    fs.mkdirSync(newImageFolder);
                 }
 
-                let filedir = newFileDir + req.file["image"].filename;
+                let filedir = newImageFolder + '/' + req.file["image"].filename;
 
                 fs.writeFile(filedir, req.file.image.buffer, (err) => {
                     this.success_response = {
@@ -289,48 +292,41 @@ export class ApiV1FigureRoute extends BaseRoute {
                         };
 
                         /**
-                         * TODO!
-                         * Read available uploaded image by path+userID+-figure
-                         * If exists, get filedir then rename file to path+userID+respCreateFigure.id
+                         * Read available uploaded image by path+userID+
+                         * If exists, get folderPath then rename file to path+respCreateFigure.id
                          */
-
-                        let filedir = process.env.FIGURE_IMAGE_DIR + userID + '-figure';
-
-                        fs.exists(filedir, (exists) => {
-
-                            if (exists) {
-                                this.createFigure(figure_data, userID).then(respCreateFigure=>{
+                        let folderPath = process.env.FIGURE_IMAGE_DIR + userID
+                        if (fs.existsSync(folderPath)) {
+                            this.createFigure(figure_data, userID).then(respCreateFigure=>{
                                     
-                                    let newFileDir = process.env.FIGURE_IMAGE_DIR + respCreateFigure.content._id 
-                                    
-                                    if (!fs.existsSync(newFileDir)){
-                                        fs.mkdirSync(newFileDir);
-                                    }
+                                let newFolderDir = process.env.FIGURE_IMAGE_DIR + respCreateFigure.content._id 
+                                
+                                if (!fs.existsSync(newFolderDir)){
+                                    fs.mkdirSync(newFolderDir);
+                                }
 
-                                    let newFileName = newFileDir +'/'+ 1
-
-                                    fs.rename(filedir, newFileName, (err) => {
-                                        if (err) {
-                                            this.error_response = {
-                                                "status": 309,
-                                                "message": "RENAME_FILE_ERROR",
-                                                "content": err.message
-                                            };
-                                            res.json(this.error_response);
+                                fs.rename(folderPath, newFolderDir, (err) => {
+                                    if (err) {
+                                        this.error_response = {
+                                            "status": 309,
+                                            "message": "RENAME_FOLDER_ERROR",
+                                            "content": err.message
                                         };
-                                        res.send(respCreateFigure);
-                                    });
-                                }).catch(err=>{
-                                    res.send(err);
-                                })
-                            } else {
-                                this.error_response = {
-                                    "status": 307,
-                                    "message": "FIGURE_IMAGE_NOT_UPLOADED"
-                                };
-                                res.json(this.error_response);
-                            }
-                        });
+                                        res.json(this.error_response);
+                                    };
+                                    res.send(respCreateFigure);
+                                });
+                            }).catch(err=>{
+                                res.send(err);
+                            })
+                        }else{
+                            this.error_response = {
+                                "status": 307,
+                                "message": "NO_IMAGE_UPLOADED"
+                            };
+                            res.json(this.error_response);
+                        }
+
                     }else{
                         this.error_response = {
                             "status": 307,
