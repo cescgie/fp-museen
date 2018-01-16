@@ -37,6 +37,7 @@ import { ObjectId } from "bson";
 
 import imageType = require('image-type');
 import fs = require('fs');
+const rimraf = require('rimraf');
 
 /**
  * / route
@@ -154,7 +155,6 @@ export class ApiV1FigureRoute extends BaseRoute {
     private saveFile(req: any, res: Response, minsize, maxsize) {
         return new Promise((resolve, reject) => {
             req.file = {};
-
             req.busboy.on('file', function(fieldname, file, filename, encoding, mimetype) {
                 if (!filename) {
                     this.error_response = {
@@ -229,7 +229,7 @@ export class ApiV1FigureRoute extends BaseRoute {
                 }
 
                 let filedir = process.env.FIGURE_IMAGE_DIR + req.file["image"].filename;
-
+                
                 fs.writeFile(filedir, req.file.image.buffer, (err) => {
                     this.success_response = {
                         "status": 200,
@@ -461,11 +461,25 @@ export class ApiV1FigureRoute extends BaseRoute {
                                             };
                                             res.json(this.error_response);
                                         }else{
-                                            this.success_response = {
-                                                "status": 200,
-                                                "message": "FIGURE_DELETE_SUCCESS"
-                                            };
-                                            res.json(this.success_response);
+                                            //delete all figure images
+                                            let filedir = process.env.FIGURE_IMAGE_DIR + figureId;
+
+                                            rimraf(filedir, (error)=> { 
+                                                if (error) {
+                                                    this.error_response = {
+                                                        "status": 309,
+                                                        "message": "FIGURE_DELETED_BUT_DELETE_IMAGE_ERROR",
+                                                        "content": err.message
+                                                    };
+                                                    res.json(this.error_response);
+                                                } else {
+                                                    this.success_response = {
+                                                        "status": 200,
+                                                        "message": "FIGURE_DELETE_SUCCESS"
+                                                    };
+                                                    res.json(this.success_response);
+                                                }
+                                            });
                                         }
                                     });
                                 }else{
