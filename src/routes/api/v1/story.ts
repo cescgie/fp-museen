@@ -123,7 +123,7 @@ export class ApiV1StoryRoute extends BaseRoute {
                     let userID = jwt.body.sub;
                     let userRole = jwt.body.permissions;
                     // HEADER QUERY
-                    let figureId:number = req.query.figureId;
+                    let storyId:number = req.query.storyId;
 
                     let folders: any = this.mediaFolder;
                     let read = (dir) =>
@@ -135,7 +135,7 @@ export class ApiV1StoryRoute extends BaseRoute {
                     let readFolder: any = {};
                     folders.forEach(element => {
                         readFolder[element] = []
-                        let mediaFolder = this.imageDir + figureId
+                        let mediaFolder = this.imageDir + storyId
                         let elementFolder = mediaFolder + '/' + element
                         if (fs.existsSync(elementFolder)) {
                             readFolder[element] = read(elementFolder)
