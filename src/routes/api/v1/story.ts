@@ -600,11 +600,25 @@ export class ApiV1StoryRoute extends BaseRoute {
                                             };
                                             res.json(this.error_response);
                                         }else{
-                                            this.success_response = {
-                                                "status": 200,
-                                                "message": "STORY_DELETE_SUCCESS"
-                                            };
-                                            res.json(this.success_response);
+                                            //delete all story images
+                                            let filedir = this.imageDir + storyId;
+
+                                            rimraf(filedir, (error)=> { 
+                                                if (error) {
+                                                    this.error_response = {
+                                                        "status": 309,
+                                                        "message": "STORY_DELETED_BUT_DELETE_IMAGE_ERROR",
+                                                        "content": err.message
+                                                    };
+                                                    res.json(this.error_response);
+                                                } else {
+                                                    this.success_response = {
+                                                        "status": 200,
+                                                        "message": "STORY_DELETE_SUCCESS"
+                                                    };
+                                                    res.json(this.success_response);
+                                                }
+                                            });
                                         }
                                     });
                                 }else{
