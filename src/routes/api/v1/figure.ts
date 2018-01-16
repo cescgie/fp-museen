@@ -290,12 +290,37 @@ export class ApiV1FigureRoute extends BaseRoute {
                          * Read available uploaded image by path+userID+-figure
                          * If exists, get filedir then rename file to path+userID+respCreateFigure.id
                          */
-                        this.createFigure(figure_data, userID).then(respCreateFigure=>{
-                            res.send(respCreateFigure);
-                        }).catch(err=>{
-                            res.send(err);
-                        })
 
+                        let filedir = process.env.FIGURE_IMAGE_DIR + userID + '-figure';
+                        console.log(filedir);
+                        fs.exists(filedir, (exists) => {
+
+                            if (exists) {
+                                this.createFigure(figure_data, userID).then(respCreateFigure=>{
+                            
+                                    let newFileDir = process.env.FIGURE_IMAGE_DIR + respCreateFigure.content._id
+                                    fs.rename(filedir, newFileDir, (err) => {
+                                        if (err) {
+                                            this.error_response = {
+                                                "status": 309,
+                                                "message": "RENAME_FILE_ERROR",
+                                                "content": err.message
+                                            };
+                                            res.json(this.error_response);
+                                        };
+                                        res.send(respCreateFigure);
+                                    });
+                                }).catch(err=>{
+                                    res.send(err);
+                                })
+                            } else {
+                                this.error_response = {
+                                    "status": 307,
+                                    "message": "FIGURE_IMAGE_NOT_UPLOADED"
+                                };
+                                res.json(this.error_response);
+                            }
+                        });
                     }else{
                         this.error_response = {
                             "status": 307,
