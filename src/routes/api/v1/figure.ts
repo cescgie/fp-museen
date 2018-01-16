@@ -53,6 +53,7 @@ export class ApiV1FigureRoute extends BaseRoute {
     private lib:Library = new Library();
     private _apiV1UserRoute:ApiV1UserRoute = new ApiV1UserRoute();
 
+    private mediaFolder: any = ['image','video','dimage'];
     /**
      * Create the routes.
      *
@@ -88,6 +89,78 @@ export class ApiV1FigureRoute extends BaseRoute {
         router.post("/api/v1/figure/image", (req: Request, res: Response) => {
             new ApiV1FigureRoute().postImage(req, res);
         });
+
+        // Get all medias by reference in folder
+        router.get("/api/v1/figure/media", (req: Request, res: Response) => {
+            new ApiV1FigureRoute().getMedia(req, res);
+        });
+    }
+
+    /**
+     * Method to post figure image 
+     * JWT Authorization needed.
+     * 
+     * @param req HEADER: JWT Token(!) 
+     * @param res {status,message,content}
+     */
+    public getMedia(req: Request, res: Response) {
+        if (req.headers['authorization'] && req.headers['authorization'] !== null) {
+            let headerAuth: any = req.headers['authorization'];
+            let campaignId: any = req.headers['campaignid'];
+
+            this._apiV1UserRoute.verifyJWT(headerAuth).then((jwt) => {
+                if (!jwt) {
+                    this.error_response = {
+                        "status": 403,
+                        "message": "NOT_AUTHORIZED"
+                    };
+                    res.status(this.error_response.status).json(this.error_response);
+                } else {
+                    // JWT BODY
+                    let userID = jwt.body.sub;
+                    let userRole = jwt.body.permissions;
+                    // HEADER QUERY
+                    let figureId:number = req.query.figureId;
+
+                    let folders: any = this.mediaFolder;
+                    let read = (dir) =>
+                    fs.readdirSync(dir)
+                        .reduce((files, file) =>
+                            files.concat(file),
+                        []);
+
+                    let readFolder: any = {};
+                    folders.forEach(element => {
+                        readFolder[element] = []
+                        let mediaFolder = process.env.FIGURE_IMAGE_DIR + figureId
+                        let elementFolder = mediaFolder + '/' + element
+                        if (fs.existsSync(elementFolder)) {
+                            readFolder[element] = read(elementFolder)
+                        }
+                    });
+
+                    this.success_response = {
+                        "status": 200,
+                        "message": "READ_MEDIA_SUCCESS",
+                        "content": readFolder
+                    };
+
+                    res.send(this.success_response);
+                }
+            }).catch((err) => {
+                this.error_response = {
+                    "status": 406,
+                    "message": 'SIGNATURE_VERIFICATION_FAILED'
+                };
+                res.status(this.error_response.status).json(this.error_response);
+            })
+        } else {
+            this.error_response = {
+                "status": 401,
+                "message": "NOT_AUTHORIZED"
+            };
+            res.status(this.error_response.status).json(this.error_response);
+        }
     }
 
     /**
