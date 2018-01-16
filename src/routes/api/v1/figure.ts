@@ -292,14 +292,21 @@ export class ApiV1FigureRoute extends BaseRoute {
                          */
 
                         let filedir = process.env.FIGURE_IMAGE_DIR + userID + '-figure';
-                        console.log(filedir);
+
                         fs.exists(filedir, (exists) => {
 
                             if (exists) {
                                 this.createFigure(figure_data, userID).then(respCreateFigure=>{
-                            
-                                    let newFileDir = process.env.FIGURE_IMAGE_DIR + respCreateFigure.content._id
-                                    fs.rename(filedir, newFileDir, (err) => {
+                                    
+                                    let newFileDir = process.env.FIGURE_IMAGE_DIR + respCreateFigure.content._id 
+                                    
+                                    if (!fs.existsSync(newFileDir)){
+                                        fs.mkdirSync(newFileDir);
+                                    }
+
+                                    let newFileName = newFileDir +'/'+ 1
+
+                                    fs.rename(filedir, newFileName, (err) => {
                                         if (err) {
                                             this.error_response = {
                                                 "status": 309,
