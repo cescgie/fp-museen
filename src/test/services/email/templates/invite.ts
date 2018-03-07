@@ -15,6 +15,9 @@ import { SendInviteEmailTemplate } from "../../../../services/email/templates/in
 //import file system i/o api
 import * as fs from "fs";
 
+const dotenv = require('dotenv');
+dotenv.load();
+
 @suite
 class SendInviteEmailTemplateTest {
 
@@ -60,8 +63,8 @@ class SendInviteEmailTemplateTest {
   @test("should send an email")
   public send() {
     // IMPORTANT
-    const EMAIL: string = "yoggifirmanda@gmail.com";
-    const NAME: string = "Yoggi Firmanda";
+    const EMAIL: string = process.env.TO_EMAIL;
+    const NAME: string = process.env.TO_NAME;
 
     //set to
     this.template.email.addTo(EMAIL, NAME);
