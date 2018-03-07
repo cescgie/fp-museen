@@ -102,6 +102,11 @@ export class ApiV1UserRoute extends BaseRoute {
             new ApiV1UserRoute().forgot_password(req, res);
         });
 
+        // update password
+        router.post("/api/v1/user/reset-password", (req: Request, res: Response) => {
+            new ApiV1UserRoute().reset_password(req, res);
+        });
+
     }
 
     /**
@@ -830,6 +835,77 @@ export class ApiV1UserRoute extends BaseRoute {
                                     });
                             }
                         });
+                    }
+                }
+            });
+        } else {
+            this.error_response = {
+                "status": 307,
+                "message": "DATA_NOT_COMPLETE"
+            };
+            res.json(this.error_response);
+        }
+    }
+
+    /**
+     * Method to reset password
+     * @param req email, token, password
+     * @param res 
+     */
+    public reset_password(req: Request, res: Response) {
+        let email = req.body.email;
+        let token = req.body.token;
+        let password = req.body.password;
+
+        // Check if email exists
+        if (email && token && password) {
+            User.findOne({ email: email }, (err, user) => {
+                if (err) {
+                    this.error_response = {
+                        "status": 402,
+                        "message": "DATABASE_ERROR"
+                    };
+                    res.send(this.error_response);
+                } else {
+                    if (!user) {
+                        this.error_response = {
+                            "status": 302,
+                            "message": "NO_USER_EXISTS"
+                        };
+                        res.json(this.error_response);
+                    } else {
+                        if (user.token !== token || user.token === '' || user.token === null) {
+                            this.error_response = {
+                                "status": 304,
+                                "message": "INVALID_TOKEN"
+                            };
+                            res.send(this.error_response);
+                        } else {
+                            // activate user while reset password
+                            let data_toUpdate: type.user = {
+                                token: null,
+                                active: true,
+                                password: this.hashPassword(password),
+                                updatedAt: new Date()
+                            }
+
+                            user.set(data_toUpdate);
+                            user.save((err, updatedUser) => {
+                                if (err) {
+                                    this.error_response = {
+                                        status: 402,
+                                        message: "DATABASE_ERROR"
+                                    };
+                                    res.send(this.error_response);
+                                } else {
+                                    this.success_response = {
+                                        status: 200,
+                                        message: "USER_RESET_SUCCESS"
+                                    };
+                                    res.send(this.success_response);
+                                }
+                            });
+                        }
                     }
                 }
             });
