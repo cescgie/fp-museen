@@ -1,0 +1,12 @@
+Description= Museen Backend
+Documentation=https://github.com/cescgie/fp-museen-backend/blob/dev-master/README.md
+After=network.target
+
+[Service]
+WorkingDirectory=/home/yoggi/app/backend
+ExecStart=/usr/local/bin/node /home/yoggi/app/backend/bin/www
+Restart=on-failure
+
+
+[Install]
+WantedBy=default.target
