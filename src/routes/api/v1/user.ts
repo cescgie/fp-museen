@@ -34,6 +34,8 @@ const secureRandom = require('secure-random');
 
 import { Email } from "../../../services/email/facades/email";
 import { SendForgotPasswordTemplate } from "../../../services/email/templates/password";
+import { SendConfirmationEmailTemplate } from "../../../services/email/templates/confirmation";
+
 /**
  * 
  * / route
@@ -50,7 +52,9 @@ export class ApiV1UserRoute extends BaseRoute {
 
     private lib:Library = new Library();
 
+    // email
     private forgot_password_confirmation: SendForgotPasswordTemplate;
+    private template_confirmation: SendConfirmationEmailTemplate;
 
     /**
      * Create the routes.
@@ -116,6 +120,8 @@ export class ApiV1UserRoute extends BaseRoute {
 
         // email class: forgot pass
         this.forgot_password_confirmation = new SendForgotPasswordTemplate();
+        // email class: email confirm
+        this.template_confirmation = new SendConfirmationEmailTemplate();
 
         // allowed or except user data
         this.object_properties = ['_id', 'createdAt', 'updatedAt', 'email', 'password', 'token', 'active', 'firstname', 'lastname', 'role', 'boxid'];
@@ -131,6 +137,7 @@ export class ApiV1UserRoute extends BaseRoute {
         let lastname = req.body.lastname;
         let email = req.body.email;
         let password = req.body.password;
+        let appUrl = req.body.appUrl;
 
          // Check if mandatory values exist
          if(firstname && lastname && email && password){
@@ -157,6 +164,10 @@ export class ApiV1UserRoute extends BaseRoute {
                         updatedAt:new Date()
                     };
 
+                    this.template_confirmation.user_email = email;
+                    this.template_confirmation.lastname = lastname;
+                    this.template_confirmation.confirmURL = appUrl + '/activate?email=' + email + '&token=' + verify_token;
+
                     // save to DB
                     let user_model = new User(user_data)
                     user_model.save((err, data)=>{
@@ -172,17 +183,38 @@ export class ApiV1UserRoute extends BaseRoute {
                                 role:data.role,
                             }
 
-                            // Generate Token
-                            let token:any = this.generateToken(dataForToken);
-                            
-                            this.success_response = {
-                                status:200,
-                                message:'USER_CREATE_SUCCESS',
-                                content: {
-                                    token:token
-                                }
-                            }
-                            res.json(this.success_response);                            
+                            const EMAIL: string = user_data.email;
+                            const NAME: string = '';
+
+                            // set to email template
+                            this.template_confirmation.email.addTo(EMAIL, NAME);
+
+                            // send to email
+                            this.template_confirmation.send()
+                                .then((response) => {
+                                    // Generate Token
+                                    let token: any = this.generateToken(dataForToken);
+
+                                    this.success_response = {
+                                        status: 200,
+                                        message: 'USER_CREATE_SUCCESS',
+                                        content: {
+                                            token: token
+                                        }
+                                    }
+
+                                    // Response as json
+                                    res.json(this.success_response);
+                                })
+                                .catch(error => {
+                                    this.error_response = {
+                                        code: error.code,
+                                        message: error.message
+                                    };
+                                    res.json(this.error_response);
+                                });
+
+                            return;                           
                         }
                     }).catch(error => {
                         this.error_response = {

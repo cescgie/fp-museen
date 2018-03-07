@@ -10,6 +10,10 @@ export class SendConfirmationEmailTemplate extends EmailTemplate {
   public title: string = "";
 
   public confirmURL: string = "";
+
+  public lastname: string = "";
+
+  public user_email: string = "";
   
   // public bar_fav_day:string = "";
     
@@ -46,6 +50,8 @@ export class SendConfirmationEmailTemplate extends EmailTemplate {
   public pre() {
     //add custom substitutions
     this.email.addSubstitution("-title-", this.title);
-    this.email.addSubstitution("-confirmURL-", this.confirmURL); 
+    this.email.addSubstitution("-confirmURL-", this.confirmURL);
+    this.email.addSubstitution("-lastname-", this.lastname);
+    this.email.addSubstitution("-user_email-", this.user_email);
   }
 }
