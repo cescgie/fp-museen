@@ -32,6 +32,8 @@ import { Library } from "../../library";
 const nJwt = require('njwt');
 const secureRandom = require('secure-random');
 
+import { Email } from "../../../services/email/facades/email";
+import { SendForgotPasswordTemplate } from "../../../services/email/templates/password";
 /**
  * 
  * / route
@@ -47,6 +49,8 @@ export class ApiV1UserRoute extends BaseRoute {
     protected object_properties: any;
 
     private lib:Library = new Library();
+
+    private forgot_password_confirmation: SendForgotPasswordTemplate;
 
     /**
      * Create the routes.
@@ -89,6 +93,11 @@ export class ApiV1UserRoute extends BaseRoute {
             new ApiV1UserRoute().update(req, res);
         });
 
+        // forget password
+        router.post("/api/v1/user/forgot-password", (req: Request, res: Response) => {
+            new ApiV1UserRoute().forgot_password(req, res);
+        });
+
     }
 
     /**
@@ -104,6 +113,10 @@ export class ApiV1UserRoute extends BaseRoute {
         this.secret_key = process.env.SECRET_KEY;
         // base app URL
         this.baseURL = process.env.APP_BASEURL;
+
+        // email class: forgot pass
+        this.forgot_password_confirmation = new SendForgotPasswordTemplate();
+
         // allowed or except user data
         this.object_properties = ['_id', 'createdAt', 'updatedAt', 'email', 'password', 'token', 'active', 'firstname', 'lastname', 'role', 'boxid'];
     }
@@ -712,5 +725,88 @@ export class ApiV1UserRoute extends BaseRoute {
                 }
             });
         });
+    }
+
+    /**
+     * Method to send email forget password
+     * @param req 
+     * @param res 
+     */
+    public forgot_password(req: Request, res: Response) {
+        let lang = req.headers['lang'];
+        let email = req.body.email;
+        let appUrl = req.body.appUrl;
+
+        // Check if email exists
+        if (email || appUrl) {
+            User.findOne({ email: req.body.email }, (err, user) => {
+                if (err) {
+                    this.error_response = {
+                        "status": 302,
+                        "message": "DATABASE_ERROR"
+                    };
+                    res.json(this.error_response);
+                } else {
+                    if (!user) {
+                        this.error_response = {
+                            "status": 304,
+                            "message": "NO_USER_EXISTS"
+                        };
+                        res.send(this.error_response);
+                    } else {
+                        let reset_token: string = this.hashPassword(email);
+
+                        let user_data: type.user = {
+                            token: reset_token,
+                            updatedAt: new Date()
+                        };
+
+                        this.forgot_password_confirmation.forgotPasswordURL = appUrl + '/password-reset?email=' + email + '&token=' + reset_token;
+                        this.forgot_password_confirmation.email_user = email;
+                        this.forgot_password_confirmation.firstname = user.firstname;
+                        this.forgot_password_confirmation.lastname = user.lastname;
+
+                        user.set(user_data);
+                        user.save((err, updatedUser) => {
+                            if (err) {
+                                this.error_response = {
+                                    "status": 402,
+                                    "message": "DATABASE_ERROR"
+                                };
+                                res.json(this.error_response);
+                            } else {
+                                const EMAIL: string = user.email;
+                                const NAME: string = '';
+
+                                // set to email template
+                                this.forgot_password_confirmation.email.addTo(EMAIL, NAME);
+
+                                // send to email
+                                this.forgot_password_confirmation.send()
+                                    .then((response) => {
+                                        this.success_response = {
+                                            status: 200,
+                                            message: "USER_FORGOTPASSWORD_SUCCESS"
+                                        };
+                                        res.send(this.success_response);
+                                    }).catch(error => {
+                                        this.error_response = {
+                                            code: error.code,
+                                            message: error
+                                        };
+                                        res.json(this.error_response);
+                                    });
+                            }
+                        });
+                    }
+                }
+            });
+        } else {
+            this.error_response = {
+                "status": 307,
+                "message": "DATA_NOT_COMPLETE"
+            };
+            res.json(this.error_response);
+        }
     }
 }

@@ -10,8 +10,12 @@ export class SendForgotPasswordTemplate extends EmailTemplate {
   public title: string = "";
 
   public email_user: string = "";
-    
+
   public forgotPasswordURL: string = "";
+
+  public firstname: string = "";
+
+  public lastname: string = "";
 
   /**
    * Returns the email subject.
@@ -46,7 +50,9 @@ export class SendForgotPasswordTemplate extends EmailTemplate {
   public pre() {
     //add custom substitutions
     this.email.addSubstitution("-title-", this.title);
-    this.email.addSubstitution("-email_user-", this.email_user);     
-    this.email.addSubstitution("-forgotPasswordURL-", this.forgotPasswordURL); 
+    this.email.addSubstitution("-email_user-", this.email_user);
+    this.email.addSubstitution("-firstname-", this.firstname);
+    this.email.addSubstitution("-lastname-", this.lastname);
+    this.email.addSubstitution("-forgotPasswordURL-", this.forgotPasswordURL);
   }
 }
