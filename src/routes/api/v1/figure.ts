@@ -54,6 +54,9 @@ export class ApiV1FigureRoute extends BaseRoute {
     private _apiV1UserRoute:ApiV1UserRoute = new ApiV1UserRoute();
 
     private mediaFolder: any = ['image','video','dimage'];
+
+    imageDir:string = process.env.ASSETS_IMAGE_DIR+'/figure/'
+
     /**
      * Create the routes.
      *
@@ -132,7 +135,7 @@ export class ApiV1FigureRoute extends BaseRoute {
                     let readFolder: any = {};
                     folders.forEach(element => {
                         readFolder[element] = []
-                        let mediaFolder = process.env.FIGURE_IMAGE_DIR + figureId
+                        let mediaFolder = this.imageDir + figureId
                         let elementFolder = mediaFolder + '/' + element
                         if (fs.existsSync(elementFolder)) {
                             readFolder[element] = read(elementFolder)
@@ -298,7 +301,7 @@ export class ApiV1FigureRoute extends BaseRoute {
                     reject(this.error_response);
                 }
 
-                let newUserFolder = process.env.FIGURE_IMAGE_DIR + userID 
+                let newUserFolder = this.imageDir + userID 
                 if (!fs.existsSync(newUserFolder)){
                     fs.mkdirSync(newUserFolder);
                 }
@@ -370,11 +373,11 @@ export class ApiV1FigureRoute extends BaseRoute {
                          * Read available uploaded image by path+userID+
                          * If exists, get folderPath then rename file to path+respCreateFigure.id
                          */
-                        let folderPath = process.env.FIGURE_IMAGE_DIR + userID
+                        let folderPath = this.imageDir + userID
                         if (fs.existsSync(folderPath)) {
                             this.createFigure(figure_data, userID).then(respCreateFigure=>{
                                     
-                                let newFolderDir = process.env.FIGURE_IMAGE_DIR + respCreateFigure.content._id 
+                                let newFolderDir = this.imageDir + respCreateFigure.content._id 
                                 
                                 if (!fs.existsSync(newFolderDir)){
                                     fs.mkdirSync(newFolderDir);
@@ -536,7 +539,7 @@ export class ApiV1FigureRoute extends BaseRoute {
                                             res.json(this.error_response);
                                         }else{
                                             //delete all figure images
-                                            let filedir = process.env.FIGURE_IMAGE_DIR + figureId;
+                                            let filedir = this.imageDir + figureId;
 
                                             rimraf(filedir, (error)=> { 
                                                 if (error) {
